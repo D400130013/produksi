@@ -59,6 +59,7 @@ func Programflash(bord string) {
 		// SNVCU(Data)
 		if RSLonlyflag == 1 {
 			ExecuteOpenOCDble(Data)
+			// ExecuteOpenOCDvcu(Data)
 		} else {
 			if ExecuteOpenOCDble(Data) == nil {
 				ExecuteOpenOCDvcu(Data)
@@ -70,8 +71,9 @@ func Programflash(bord string) {
 		// SNhmi(Data)
 		// Implementasi untuk board yang mengandung "hmi"
 	} else if strings.Contains(bord, "bms") {
+
 		ExecuteOpenOCDBMS(Data)
-		// buatexsel(bord)
+
 		// tambahbaris(bord, "ayambakar")
 		// SnBmsString(Data, 2)
 		// SnBms(Data)

@@ -1,10 +1,12 @@
 package modul
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -39,7 +41,10 @@ func DownloadFile(url string, filepath string) (uint32, uint32, error) {
 		return 0, 0, err
 	}
 	defer resp.Body.Close()
-
+	// fmt.Println("Header Respons:", resp.Status)
+	if resp.StatusCode != http.StatusOK {
+		return 0, 0, fmt.Errorf("gagal mengambil metadata, status: %s", resp.Status)
+	}
 	var crc uint32
 	var length uint32
 
@@ -98,6 +103,7 @@ func Download_firmware(bord string, key []string, value []string) {
 		} else {
 
 			crcbin, lengthbin, eror := CalculateCrcAndLen(filepath)
+
 			if eror == nil {
 				if crc == crcbin && length == lengthbin {
 					println("Firmware berhasil diunduh ", key[i])
@@ -107,6 +113,8 @@ func Download_firmware(bord string, key []string, value []string) {
 					if err != nil {
 						println("Gagal memindahkan file:", err)
 					}
+				} else {
+					println("CRC salah cek CRC", crc, crcbin, length, lengthbin)
 				}
 			}
 
@@ -198,4 +206,54 @@ func CekVersion(bords string) ([]string, []string) {
 	}
 
 	return keys, values
+}
+
+func IpaLogin(username string, password string) uint8 {
+	// Menggabungkan username dan password dengan tanda ":"
+	credentials := fmt.Sprintf("%s:%s", username, password)
+
+	// Melakukan encoding ke Base64
+	encodedCredentials := base64.StdEncoding.EncodeToString([]byte(credentials))
+
+	// Membuat header Authorization
+	authorizationHeader := fmt.Sprintf("Basic %s", encodedCredentials)
+
+	// URL endpoint
+	url := "https://team.savart-ev.com/api/login"
+
+	// Membuat request GET
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		log.Fatalf("Error creating request: %v", err)
+		return 1
+	}
+
+	// Menambahkan header Authorization ke request
+	req.Header.Set("Authorization", authorizationHeader)
+
+	// Membuat client HTTP
+	client := &http.Client{}
+
+	// Mengirim request
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatalf("Error sending request: %v", err)
+		return 1
+	}
+	defer resp.Body.Close()
+
+	// Membaca respons dari server
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalf("Error reading response body: %v", err)
+		return 1
+	}
+
+	// Menampilkan status dan body respons
+	fmt.Printf("Status Code: %d\n", resp.StatusCode)
+	fmt.Printf("Response Body: %s\n", string(body))
+	if resp.StatusCode == 200 {
+		return 0
+	}
+	return 1
 }

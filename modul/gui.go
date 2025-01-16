@@ -1,6 +1,7 @@
 package modul
 
 import (
+	"fmt"
 	"log"
 
 	"fyne.io/fyne/v2"
@@ -13,14 +14,55 @@ import (
 
 var MyWindow fyne.Window
 var RSLonlyflag uint8
-var namaapp = "PRODUKSI v0.1.2"
+var Updateonlyflag uint8
+var namaapp = "PRODUKSI v1.2.0"
+
+func Loginapp() {
+	a := app.New()
+	loginWindow := a.NewWindow("Login")
+	loginWindow.Resize(fyne.NewSize(300, 200))
+
+	// Widget untuk username dan password
+	usernameEntry := widget.NewEntry()
+	usernameEntry.SetPlaceHolder("Username")
+
+	passwordEntry := widget.NewPasswordEntry()
+	passwordEntry.SetPlaceHolder("Password")
+
+	// Tombol login
+	loginButton := widget.NewButton("Login", func() {
+		username := usernameEntry.Text
+		password := passwordEntry.Text
+		Istrueid := IpaLogin(username, password)
+		// Validasi kredensial (contoh: username = "admin", password = "12345")
+		if Istrueid == 0 {
+			dialog.ShowInformation("Login Berhasil", "Selamat datang!", loginWindow)
+			Guiapp(a)
+			loginWindow.Close()
+			// Buka aplikasi utama
+		} else {
+			dialog.ShowInformation("Login Gagal", "Username atau password salah.", loginWindow)
+		}
+	})
+
+	// Layout login
+	loginWindow.SetContent(container.NewVBox(
+		widget.NewLabel("Silakan login untuk melanjutkan"),
+		usernameEntry,
+		passwordEntry,
+		loginButton,
+	))
+
+	// Menampilkan jendela login
+	loginWindow.ShowAndRun()
+}
 
 // var Data Bus
-func Guiapp() {
+func Guiapp(myApp fyne.App) {
 
 	// // Menampilkan window
 	// MyWindow.ShowAndRun()
-	myApp := app.New()
+	// myApp := app.New()
 	MyWindow = myApp.NewWindow(namaapp)
 
 	// Mengatur ukuran jendela
@@ -32,12 +74,14 @@ func Guiapp() {
 	filePath := "battrymenu.xlsx" // Ganti dengan path file Excel yang benar
 	f, err := excelize.OpenFile(filePath)
 	if err != nil {
-		log.Fatal(err)
+		dialog.ShowInformation("Gagal", "battrymenu.xlsx", MyWindow)
+		return
 	}
 
 	rows, err := f.GetRows("Sheet1") // Ganti dengan nama sheet yang benar
 	if err != nil {
-		log.Fatal(err)
+		dialog.ShowInformation("Gagal", "battrymenu.xlsx", MyWindow)
+		return
 	}
 	// Mengisi typeCellMap berdasarkan data dari Excel
 	for _, row := range rows {
@@ -242,6 +286,21 @@ func Guiapp() {
 	})
 	RSLonlyLabel.Hide()
 	check1.Hide()
+
+	Updateonlyflag = 0
+	UpdateonlyLabel := widget.NewLabel("Update Only:")
+	check2 := widget.NewCheck("Update Only", func(checked bool) {
+		if checked {
+			// println("Poin Centang 1 diaktifkan")
+			Updateonlyflag = 1
+
+		} else {
+			// println("Poin Centang 1 dinonaktifkan")
+			Updateonlyflag = 0
+		}
+	})
+	UpdateonlyLabel.Hide()
+	check2.Hide()
 	// Membuat container horizontal untuk Hardware Model (High Set & Low Set)
 	hardwareRow := container.NewHBox(
 		hardwareLabel,
@@ -254,6 +313,16 @@ func Guiapp() {
 
 	// Mengubah fungsi dropdown agar menampilkan input ketika "bms" dipilih
 	dropdown.OnChanged = func(selected string) {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Println("Recovered from panic in dropdown:", r)
+			}
+		}()
+
+		if selected == "" {
+			dialog.ShowInformation("Error", "Pilihan tidak boleh kosong", MyWindow)
+			return
+		}
 
 		MyWindow.SetTitle(namaapp + " " + selected)
 		modelidLabel.Hide()
@@ -283,6 +352,8 @@ func Guiapp() {
 		typelcddropdown.Hide()
 		RSLonlyLabel.Hide()
 		check1.Hide()
+		UpdateonlyLabel.Hide()
+		check2.Hide()
 		if selected == "bms" {
 			modelver, erri := GetlistModelversi(selected)
 			if erri != nil {
@@ -304,6 +375,8 @@ func Guiapp() {
 			teganganDropdown.Show()
 			hardwareLabel.Show()
 			hardwareRadioGroup.Show()
+			UpdateonlyLabel.Show()
+			check2.Show()
 		} else if selected == "vcu" {
 			modelver, erri := GetlistModelversi(selected)
 			if erri != nil {
@@ -502,17 +575,19 @@ func Guiapp() {
 		batteryRow,
 		hardwareRow,
 		rslvcuRow,
+		UpdateonlyLabel,
+		check2,
 		submitButton,
 		widget.NewButton("Quit", func() {
 			myApp.Quit()
 		}),
 	)
-
+	fmt.Println("Recovered from panic in dropdown:")
 	// Mengatur konten ke dalam jendela
 	MyWindow.SetContent(content)
 
 	// Menampilkan jendela
-	MyWindow.ShowAndRun()
+	MyWindow.Show()
 }
 
 func Dialoginfo(msg string) {
