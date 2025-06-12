@@ -2,15 +2,19 @@ package modul
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
+	"image/jpeg"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
+	"github.com/liyue201/goqr"
 	"github.com/nwaples/rardecode"
 )
 
@@ -77,6 +81,7 @@ func Setversifirmware(bords string) error {
 
 	if appStr, exists := versionData["application"]; exists {
 		Data.Versifirmapp, _ = VersionToHex(appStr)
+		Data.Versifirmappstr = appStr
 
 		// Sekarang Anda dapat menggunakan bootloaderUint32
 		fmt.Printf("application sebagai uint32: %d\n", Data.Versifirmapp)
@@ -86,11 +91,26 @@ func Setversifirmware(bords string) error {
 
 	if bootloaderStr, exists := versionData["bootloader"]; exists {
 		Data.Versifirmboot, _ = VersionToHex(bootloaderStr)
+		Data.Versifirmbootstr = bootloaderStr
 
 		// Sekarang Anda dapat menggunakan bootloaderUint32
 		fmt.Printf("Bootloader sebagai uint32: %d\n", Data.Versifirmboot)
 	} else {
 		return fmt.Errorf("kunci bootloader tidak ditemukan")
+	}
+	if bootloaderStr2, exists := versionData["ble_bootloader"]; exists {
+		Data.Versifirmboot2, _ = VersionToHex(bootloaderStr2)
+		Data.Versifirmbootstr2 = bootloaderStr2
+
+		// Sekarang Anda dapat menggunakan bootloaderUint32
+		fmt.Printf("BLE-Bootloader sebagai uint32: %d\n", Data.Versifirmboot2)
+	}
+	if appStr2, exists := versionData["ble_application"]; exists {
+		Data.Versifirmapp2, _ = VersionToHex(appStr2)
+		Data.Versifirmappstr2 = appStr2
+
+		// Sekarang Anda dapat menggunakan bootloaderUint32
+		fmt.Printf("BLE-APP sebagai uint32: %d \n", Data.Versifirmapp2)
 	}
 
 	return nil
@@ -503,3 +523,164 @@ func CreateBinFile(filename string, data []byte) error {
 
 	return nil
 }
+
+// func ReadLoginFile() error {
+// 	// Nama file yang ingin dibaca
+// 	filePath := "login.txt"
+
+// 	// Membuka file untuk dibaca
+// 	file, err := os.Open(filePath)
+// 	if err != nil {
+// 		return fmt.Errorf("gagal membuka file: %v", err)
+// 	}
+// 	defer file.Close() // Pastikan file ditutup setelah selesai
+
+// 	// Membaca isi file baris per baris
+// 	scanner := bufio.NewScanner(file)
+// 	var content string
+// 	for scanner.Scan() {
+// 		content += scanner.Text() + "\n" // Menambahkan setiap baris ke konten
+// 	}
+
+// 	if err := scanner.Err(); err != nil {
+// 		return fmt.Errorf("error membaca file: %v", err)
+// 	}
+// 	err = Getprofil(content)
+// 	if err != nil {
+// 		fmt.Println("Error:", err)
+
+// 		return fmt.Errorf("gagal parsing JSON: %v", err)
+// 	}
+// 	return nil
+// }
+
+func ReadLoginFile() error {
+	// Nama file yang ingin dibaca
+	filePath := "login.txt"
+
+	// Membuka file untuk dibaca
+	file, err := os.Open(filePath)
+	if err != nil {
+		return fmt.Errorf("gagal membuka file: %v", err)
+	}
+	defer file.Close() // Pastikan file ditutup setelah selesai
+
+	// Membaca isi file baris per baris
+	scanner := bufio.NewScanner(file)
+	var content string
+	for scanner.Scan() {
+		content += strings.TrimSpace(scanner.Text()) + "\n" // Menghapus spasi di awal dan akhir setiap baris
+	}
+
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("error membaca file: %v", err)
+	}
+	result, err := ExtractStringBetweenBraces(content)
+	if err != nil {
+		return fmt.Errorf("gagal parsing JSON: %v", err)
+	}
+	err = Getprofil(result)
+	if err != nil {
+		fmt.Println("Error:", err)
+
+		return fmt.Errorf("gagal parsing JSON: %v", err)
+	}
+	return nil
+}
+
+func ExtractStringBetweenBraces(input string) (string, error) {
+	// Menggunakan regex untuk menemukan string di antara kurung kurawal
+	re := regexp.MustCompile(`\{(.*?)\}`)
+	matches := re.FindStringSubmatch(input)
+
+	if len(matches) < 2 {
+		return "", fmt.Errorf("tidak ada string ditemukan di antara kurung kurawal")
+	}
+
+	return matches[1], nil
+}
+
+type Response struct {
+	Code string `json:"code"`
+	Data struct {
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+	} `json:"data"`
+}
+
+func SaveAccessTokenToFile(accessToken string) error {
+	// Membuka file login.txt untuk ditulis, jika tidak ada, buat file baru
+	file, err := os.OpenFile("login.txt", os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("gagal membuka atau membuat file: %v", err)
+	}
+	defer file.Close()
+
+	// Menulis access_token ke dalam file
+	_, err = file.WriteString("{" + accessToken + "}")
+	if err != nil {
+		return fmt.Errorf("gagal menulis ke file: %v", err)
+	}
+
+	fmt.Println("Access token berhasil disimpan di login.txt")
+	return nil
+}
+
+// Fungsi untuk parsing response body
+func ParseResponseBody(responseBody string) error {
+	var response Response
+
+	// Melakukan parsing JSON
+	err := json.Unmarshal([]byte(responseBody), &response)
+	if err != nil {
+		return fmt.Errorf("gagal parsing JSON: %v", err)
+	}
+	SaveAccessTokenToFile(response.Data.AccessToken)
+	if err != nil {
+		// fmt.Println("Error:", err)
+		return fmt.Errorf("gagal parsing JSON: %v", err)
+	}
+	err = Getprofil(response.Data.AccessToken)
+	if err != nil {
+		// fmt.Println("Error:", err)
+		return fmt.Errorf("gagal parsing JSON: %v", err)
+	}
+
+	// Mengembalikan access_token
+	return nil
+}
+
+// Fungsi untuk menyimpan access_token ke dalam login.txt
+func ScanQRCodeFromURL(url string) (string, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	img, err := jpeg.Decode(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	qrCodes, err := goqr.Recognize(img)
+	if err != nil {
+		return "", err
+	}
+
+	if len(qrCodes) == 0 {
+		return "", fmt.Errorf("QR code tidak ditemukan")
+	}
+
+	return string(qrCodes[0].Payload), nil
+}
+
+// func FormatHexString(value uint32) string {
+// 	byte3 := byte((value >> 24) & 0xFF)
+// 	byte2 := byte((value >> 16) & 0xFF)
+// 	byte0 := byte(value & 0xFF)
+
+// 	byte3_2 := uint16(byte3)<<8 | uint16(byte2)
+
+// 	return fmt.Sprintf("%d.%d.%d", byte3, byte3_2, byte0)
+// }

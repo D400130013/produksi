@@ -1,6 +1,7 @@
 package modul
 
 import (
+	"encoding/binary"
 	"fmt"
 	"strconv"
 )
@@ -8,6 +9,7 @@ import (
 func SnBms(data Bus) (uint32, uint32, string) {
 	data1 := uint32(0)
 	data2 := uint32(0)
+	tegangan := [8]int{12, 24, 36, 48, 60, 72, 84, 96}
 	// var newCount uint32
 	num1, err := strconv.Atoi(data.Num.Tegangan)
 	if err != nil {
@@ -39,7 +41,7 @@ func SnBms(data Bus) (uint32, uint32, string) {
 		battrytipe = "low"
 	}
 	bms := Data_bms{
-		Voltage:       num1,
+		Voltage:       tegangan[num1],
 		ParallelNum:   num2,
 		CellBrand:     data.Num.Jenis,
 		CellBrandType: data.Num.Type_,
@@ -84,6 +86,7 @@ func SnBms(data Bus) (uint32, uint32, string) {
 
 func SnBmsString(data Bus, coun uint32) string {
 	var tegangan string
+
 	switch data.Num.Tegangan {
 	case "0":
 		tegangan = "12"
@@ -106,6 +109,56 @@ func SnBmsString(data Bus, coun uint32) string {
 
 	fmt.Printf("Serial number:%s", message)
 	return message
+}
+
+func SnVCUString(sn1 uint32, sn2 uint32) string {
+	// Konversi sn1 ke array 4 byte
+	sn1Bytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(sn1Bytes, sn1)
+
+	// Konversi sn2 ke array 4 byte
+	sn2Bytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(sn2Bytes, sn2)
+
+	caun := uint16(sn2Bytes[2])<<8 | uint16(sn2Bytes[3])
+	fmt.Printf("Nilai caun: %d %02x %02x \n", caun, sn2Bytes[2], sn2Bytes[3])
+
+	message := fmt.Sprintf("%c%c%02d%02d%02d%04d", sn1Bytes[0], sn1Bytes[1], sn1Bytes[2], sn2Bytes[0], sn2Bytes[1], caun)
+
+	// // Contoh penggunaan bytes untuk membuat string
+	// // Misalnya kita ingin mengambil byte pertama dari sn1 sebagai tegangan
+	// tegangan := fmt.Sprintf("%c", sn1Bytes[0]>>4) // Mengambil 4 bit pertama
+
+	// // Mengambil 4 bit terakhir dari byte pertama sn1 untuk paralel
+	// paralel := fmt.Sprintf("%d", sn1Bytes[0]&0x0F)
+
+	// // Mengambil byte kedua sn1 untuk jenis
+	// jenis := string([]byte{sn1Bytes[1]})
+
+	// // Mengambil byte ketiga sn1 untuk tipe
+	// tipe := string([]byte{sn1Bytes[2]})
+
+	// // Mengambil byte keempat sn1 untuk tahun
+	// tahun := fmt.Sprintf("%d", 2000+int(sn1Bytes[3]))
+
+	// // Mengambil byte pertama sn2 untuk bulan
+	// bulan := fmt.Sprintf("%d", sn2Bytes[0])
+
+	// // Mengambil byte kedua sn2 untuk tahun produksi
+	// tahunPb := fmt.Sprintf("%d", 2000+int(sn2Bytes[1]))
+
+	// // Mengambil byte ketiga sn2 untuk bulan produksi
+	// bulanPb := fmt.Sprintf("%d", sn2Bytes[2])
+
+	// // Mengambil 2 byte terakhir sn2 untuk counter
+	// counter := binary.LittleEndian.Uint16(sn2Bytes[2:4])
+
+	// message := fmt.Sprintf("%s%s%s%s%s%s%s%s%04d",
+	//     tegangan, paralel, jenis, tipe, tahun, bulan, tahunPb, bulanPb, counter)
+
+	fmt.Printf("Serial number: %s\n", message)
+	return message
+	// return ""
 }
 
 func SNhmi(data Bus) (uint32, uint32, string) {

@@ -14,47 +14,58 @@ import (
 
 var MyWindow fyne.Window
 var RSLonlyflag uint8
+var QRcode string
 var Updateonlyflag uint8
-var namaapp = "PRODUKSI v1.2.0"
+var namaapp = "PRODUKSI v1.5.2"
 
 func Loginapp() {
 	a := app.New()
-	loginWindow := a.NewWindow("Login")
-	loginWindow.Resize(fyne.NewSize(300, 200))
+	err := ReadLoginFile()
+	if err == nil {
 
-	// Widget untuk username dan password
-	usernameEntry := widget.NewEntry()
-	usernameEntry.SetPlaceHolder("Username")
+		Guiapp(a)
+		// loginWindow.Close()
 
-	passwordEntry := widget.NewPasswordEntry()
-	passwordEntry.SetPlaceHolder("Password")
+	} else {
+		// os.Remove("login.txt")
+		loginWindow := a.NewWindow("Login")
+		loginWindow.Resize(fyne.NewSize(300, 200))
 
-	// Tombol login
-	loginButton := widget.NewButton("Login", func() {
-		username := usernameEntry.Text
-		password := passwordEntry.Text
-		Istrueid := IpaLogin(username, password)
-		// Validasi kredensial (contoh: username = "admin", password = "12345")
-		if Istrueid == 0 {
-			dialog.ShowInformation("Login Berhasil", "Selamat datang!", loginWindow)
-			Guiapp(a)
-			loginWindow.Close()
-			// Buka aplikasi utama
-		} else {
-			dialog.ShowInformation("Login Gagal", "Username atau password salah.", loginWindow)
-		}
-	})
+		// Widget untuk username dan password
+		usernameEntry := widget.NewEntry()
+		usernameEntry.SetPlaceHolder("Username")
 
-	// Layout login
-	loginWindow.SetContent(container.NewVBox(
-		widget.NewLabel("Silakan login untuk melanjutkan"),
-		usernameEntry,
-		passwordEntry,
-		loginButton,
-	))
+		passwordEntry := widget.NewPasswordEntry()
+		passwordEntry.SetPlaceHolder("Password")
 
-	// Menampilkan jendela login
-	loginWindow.ShowAndRun()
+		// Tombol login
+		loginButton := widget.NewButton("Login", func() {
+			username := usernameEntry.Text
+			password := passwordEntry.Text
+			Istrueid := IpaLogin(username, password)
+			// Validasi kredensial (contoh: username = "admin", password = "12345")
+			if Istrueid == 0 {
+				dialog.ShowInformation("Login Berhasil", "Selamat datang!", loginWindow)
+				Guiapp(a)
+				loginWindow.Close()
+				// Buka aplikasi utama
+			} else {
+				dialog.ShowInformation("Login Gagal", "Username atau password salah.", loginWindow)
+			}
+		})
+
+		// Layout login
+		loginWindow.SetContent(container.NewVBox(
+			widget.NewLabel("Silakan login untuk melanjutkan"),
+			usernameEntry,
+			passwordEntry,
+			loginButton,
+		))
+
+		// Menampilkan jendela login
+		loginWindow.ShowAndRun()
+	}
+	a.Run()
 }
 
 // var Data Bus
@@ -263,7 +274,7 @@ func Guiapp(myApp fyne.App) {
 
 	// Variabel untuk menyimpan nilai angka dari Hardware Model
 	var hardwareModelValue uint32
-
+	hardwareModelValue = 0
 	// Logika untuk menentukan nilai berdasarkan pilihan Hardware Model
 	hardwareRadioGroup.OnChanged = func(selected string) {
 		if selected == "High Set" {
@@ -284,8 +295,30 @@ func Guiapp(myApp fyne.App) {
 			RSLonlyflag = 0
 		}
 	})
+	check3 := widget.NewCheck("STM ONLY", func(checked bool) {
+		if checked {
+			// println("Poin Centang 1 diaktifkan")
+			RSLonlyflag = 2
+
+		} else {
+			// println("Poin Centang 1 dinonaktifkan")
+			RSLonlyflag = 0
+		}
+	})
+	check4 := widget.NewCheck("test ONLY", func(checked bool) {
+		if checked {
+			// println("Poin Centang 1 diaktifkan")
+			RSLonlyflag = 3
+
+		} else {
+			// println("Poin Centang 1 dinonaktifkan")
+			RSLonlyflag = 0
+		}
+	})
 	RSLonlyLabel.Hide()
 	check1.Hide()
+	check3.Hide()
+	check4.Hide()
 
 	Updateonlyflag = 0
 	UpdateonlyLabel := widget.NewLabel("Update Only:")
@@ -352,6 +385,8 @@ func Guiapp(myApp fyne.App) {
 		typelcddropdown.Hide()
 		RSLonlyLabel.Hide()
 		check1.Hide()
+		check3.Hide()
+		check4.Hide()
 		UpdateonlyLabel.Hide()
 		check2.Hide()
 		if selected == "bms" {
@@ -399,6 +434,8 @@ func Guiapp(myApp fyne.App) {
 			typemotordropdown.Show()
 			RSLonlyLabel.Show()
 			check1.Show()
+			check3.Show()
+			check4.Show()
 
 		} else if selected == "hmi" {
 			modelver, erri := GetlistModelversi(selected)
@@ -449,6 +486,7 @@ func Guiapp(myApp fyne.App) {
 
 	// Menambahkan tombol Submit
 	submitButton := widget.NewButton("Program", func() {
+		flashon := 0
 		if dropdown.Selected == "bms" {
 			// Validasi jika SN atau input lain kosong
 			if parallelsEntry.Text == "" || cellMonthDropdown.Selected == "" || cellYearDropdown.Selected == "" || cellTypeShort == "" {
@@ -467,9 +505,10 @@ func Guiapp(myApp fyne.App) {
 				Data.Id = hardwareModelValue
 
 				Data.Bord = dropdown.Selected
-				dialog.ShowInformation("Info", "WAIT TO FLASH ", MyWindow)
+				// dialog.ShowInformation("Info", "WAIT TO FLASH ", MyWindow)
 
-				ProsesFlash()
+				// ProsesFlash()
+				flashon = 1
 			}
 		} else if dropdown.Selected == "vcu" {
 			// Validasi jika SN atau input lain kosong
@@ -479,8 +518,9 @@ func Guiapp(myApp fyne.App) {
 			} else {
 
 				Data.Bord = dropdown.Selected
-				dialog.ShowInformation("Info", "WAIT TO FLASH ", MyWindow)
-				ProsesFlash()
+				// dialog.ShowInformation("Info", "WAIT TO FLASH ", MyWindow)
+				// ProsesFlash()
+				flashon = 1
 
 				// fmt.Println("Data 1:", joy["application"].(string))
 				// fmt.Println("Data 2:", joy["bootloader"].(string))
@@ -496,8 +536,9 @@ func Guiapp(myApp fyne.App) {
 			} else {
 
 				Data.Bord = dropdown.Selected
-				dialog.ShowInformation("Info", "WAIT TO FLASH ", MyWindow)
-				ProsesFlash()
+				// dialog.ShowInformation("Info", "WAIT TO FLASH ", MyWindow)
+				// ProsesFlash()
+				flashon = 1
 			}
 		} else if dropdown.Selected == "keyless" {
 			// Validasi jika SN atau input lain kosong
@@ -507,12 +548,58 @@ func Guiapp(myApp fyne.App) {
 			} else {
 
 				Data.Bord = dropdown.Selected
-				dialog.ShowInformation("Info", "WAIT TO FLASH ", MyWindow)
-				ProsesFlash()
+				flashon = 1
+				// dialog.ShowInformation("Info", "WAIT TO FLASH ", MyWindow)
+				// ProsesFlash()
 			}
 		} else {
 			dialog.ShowInformation("Info", "Pilihan: "+dropdown.Selected, MyWindow)
+			flashon = 0
 		}
+
+		if flashon == 1 {
+			entry := widget.NewEntry()
+			IPc := widget.NewEntry()
+
+			resultLabel := widget.NewLabel("Klik tombol untuk mulai scan QR")
+
+			butQRcode := widget.NewButton("Scan QR dari Kamera", func() {
+				resultLabel.SetText("Scanning...")
+
+				go func() {
+					IPcame := IPc.Text
+					cameraURL := "http://" + IPcame + ":8080/shot.jpg"
+					text, err := ScanQRCodeFromURL(cameraURL)
+					if err != nil {
+						resultLabel.SetText("Gagal: " + err.Error())
+					} else {
+
+						entry.SetText(text)
+						resultLabel.SetText("Hasil QR: " + text)
+						dialog.ShowInformation("QR Code Ditemukan", text, MyWindow)
+					}
+				}()
+			})
+			content := container.NewVBox(
+				widget.NewLabel("Masukkan QRCODE:"),
+				entry,
+				widget.NewLabel("Masukkan IPcamera:"),
+				IPc,
+				resultLabel,
+				butQRcode,
+			)
+
+			dialog.ShowCustomConfirm("Input QRCODE", "OK", "Cancel", content, func(b bool) {
+				if b {
+					QRcode = entry.Text
+					// label.SetText(fmt.Sprintf("Ini adalah namanya: %s", name))
+					fmt.Println("Selected: %s", QRcode)
+					dialog.ShowInformation("Info", "WAIT TO FLASH "+QRcode, MyWindow)
+					ProsesFlash()
+				}
+			}, MyWindow)
+		}
+
 	})
 
 	// Susun dropdown bulan dan tahun di satu baris untuk Battery
@@ -537,6 +624,8 @@ func Guiapp(myApp fyne.App) {
 	rslvcuRow := container.NewHBox(
 		RSLonlyLabel,
 		check1,
+		check3,
+		check4,
 	)
 
 	// Susun dropdown bulan dan tahun di satu baris untuk Cell
@@ -582,7 +671,7 @@ func Guiapp(myApp fyne.App) {
 			myApp.Quit()
 		}),
 	)
-	fmt.Println("Recovered from panic in dropdown:")
+
 	// Mengatur konten ke dalam jendela
 	MyWindow.SetContent(content)
 

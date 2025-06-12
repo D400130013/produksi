@@ -60,6 +60,16 @@ func Programflash(bord string) {
 		if RSLonlyflag == 1 {
 			ExecuteOpenOCDble(Data)
 			// ExecuteOpenOCDvcu(Data)
+		} else if RSLonlyflag == 2 {
+			// ExecuteOpenOCDble(Data)
+			ExecuteOpenOCDvcu(Data)
+		} else if RSLonlyflag == 3 {
+			// ExecuteOpenOCDble(Data)
+			// datasn1, datasn2, _, _ := ReadSNH7()
+			// SnVCUString(datasn1, datasn2)
+			if ExecuteOpenOCDble(Data) == nil {
+				ExecuteOpenOCDvcuTest(Data)
+			}
 		} else {
 			if ExecuteOpenOCDble(Data) == nil {
 				ExecuteOpenOCDvcu(Data)
@@ -83,8 +93,8 @@ func Programflash(bord string) {
 		// Implementasi untuk board yang mengandung "bms"
 	} else if strings.Contains(bord, "keyless") {
 		// ProgramKeyles()
-		ExecuteOpenOCDkeyless(Data)
 		// Implementasi untuk board yang mengandung "keyfob"
+		ExecuteOpenOCDkeyless(Data)
 	}
 }
 

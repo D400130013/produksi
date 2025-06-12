@@ -51,7 +51,10 @@ const (
 )
 
 var db *sql.DB
-var IP string = "firmware.savart-ev.com/api"
+
+var IP string = "https://part.savart-ev.com/api"
+
+// var IP string = "https://part.dev.savart-ev.com/api"
 
 // var PORT string = ""
 
@@ -157,7 +160,7 @@ func UpdateVcu(data Data_vcu) map[string]interface{} {
 	}
 
 	// Membuat request POST dengan JSON
-	url := "http://" + IP + "/vcu/generate-sn"
+	url := IP + "/vcu/generate-sn"
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
 		fmt.Println("Error creating request:", err)
@@ -216,7 +219,7 @@ func UpdateBms(data Data_bms) map[string]interface{} {
 	}
 
 	// Membuat request POST dengan JSON
-	url := "http://" + IP + "/bms/generate-sn"
+	url := IP + "/bms/generate-sn"
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
 		fmt.Println("Error creating request:", err)
@@ -269,7 +272,7 @@ func UpdateHmi(data Data_hmi) map[string]interface{} {
 	}
 
 	// Membuat request POST dengan JSON
-	url := "http://" + IP + "/hmi/generate-sn"
+	url := IP + "/hmi/generate-sn"
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
 		fmt.Println("Error creating request:", err)
@@ -321,7 +324,7 @@ func UpdateKeyless(data Data_keyless) map[string]interface{} {
 	}
 
 	// Membuat request POST dengan JSON
-	url := "http://" + IP + "/keyless/generate-sn"
+	url := IP + "/keyless/generate-sn"
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
 		fmt.Println("Error creating request:", err)
@@ -364,17 +367,17 @@ func UpdateKeyless(data Data_keyless) map[string]interface{} {
 	return datajson
 }
 
-func Updatestatus(sn string, bord string, status string) error {
+func Updatestatus(sn string, bord string, status string, qr_code string, data Bus) error {
 
 	// Konversi struct menjadi JSON
-	jsonData, err := json.Marshal(map[string]string{"status": status})
+	jsonData, err := json.Marshal(map[string]string{"status": status, "qr_code": qr_code, "bootloader_version": data.Versifirmbootstr, "firmware_version": data.Versifirmappstr, "ble_bootloader_version": data.Versifirmbootstr2, "ble_firmware_version": data.Versifirmappstr2})
 	if err != nil {
 		fmt.Println("Error marshalling JSON:", err)
 		return err
 	}
 
 	// Membuat request POST dengan JSON
-	url := "http://" + IP + "/" + bord + "/" + sn
+	url := IP + "/" + bord + "/" + sn
 	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(jsonData))
 	if err != nil {
 		fmt.Println("Error creating request:", err)
@@ -392,10 +395,16 @@ func Updatestatus(sn string, bord string, status string) error {
 		return err
 	}
 	defer resp.Body.Close()
+	// Cek status respons
+
 	fmt.Println("sudah terkirim")
 	// Menampilkan response dari server
 	body, err := ioutil.ReadAll(resp.Body) // response body is []byte
 	fmt.Println(string(body))
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println("request failed with status: %s", resp.Status)
+		return fmt.Errorf("request failed with status: %s", resp.Status)
+	}
 	return err
 	// convert to string before print
 }

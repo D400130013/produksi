@@ -25,13 +25,19 @@ type SN struct {
 }
 
 type Bus struct {
-	Bord          string
-	Id            uint32
-	Model         uint32
-	Modelver      string
-	Versifirmapp  uint32
-	Versifirmboot uint32
-	Num           SN
+	Bord              string
+	Id                uint32
+	Model             uint32
+	Modelver          string
+	Versifirmapp      uint32
+	Versifirmboot     uint32
+	Versifirmapp2     uint32
+	Versifirmboot2    uint32
+	Versifirmappstr   string
+	Versifirmbootstr  string
+	Versifirmappstr2  string
+	Versifirmbootstr2 string
+	Num               SN
 }
 
 func DownloadFile(url string, filepath string) (uint32, uint32, error) {
@@ -203,6 +209,7 @@ func CekVersion(bords string) ([]string, []string) {
 	for key, value := range data.Data.LatestVersion {
 		keys = append(keys, key)
 		values = append(values, fmt.Sprintf("%v", value)) // Mengonversi nilai ke string
+		fmt.Printf("Kunci: %s, Nilai: %v\n", key, value)  // Mencetak kunci dan nilai
 	}
 
 	return keys, values
@@ -253,7 +260,53 @@ func IpaLogin(username string, password string) uint8 {
 	fmt.Printf("Status Code: %d\n", resp.StatusCode)
 	fmt.Printf("Response Body: %s\n", string(body))
 	if resp.StatusCode == 200 {
+		ParseResponseBody(string(body))
 		return 0
 	}
 	return 1
+}
+
+func Getprofil(data string) error {
+	// Membuat header Authorization
+	authorizationHeader := fmt.Sprintf("Bearer %s", data)
+	fmt.Printf("{%s}", authorizationHeader)
+	// URL endpoint
+	url := "https://team.savart-ev.com/api/auth/profile"
+
+	// Membuat request GET
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return fmt.Errorf("gagal parsing JSON: %v", err)
+
+	}
+	req.Header.Set("Content-Type", "Application/json")
+	// Menambahkan header Authorization ke request
+	req.Header.Set("Authorization", authorizationHeader)
+
+	// Membuat client HTTP
+	client := &http.Client{}
+
+	// Mengirim request
+	resp, err := client.Do(req)
+	if err != nil {
+
+		return fmt.Errorf("Error sending request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Membaca respons dari server
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+
+		return fmt.Errorf("Error sending request: %v", err)
+	}
+
+	// Menampilkan status dan body respons
+	fmt.Printf("Status Code: %d\n", resp.StatusCode)
+	fmt.Printf("Response Body: %s\n", string(body))
+	if resp.StatusCode == 200 {
+
+		return nil
+	}
+	return fmt.Errorf("Error sending request: %v", err)
 }
