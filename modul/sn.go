@@ -84,31 +84,72 @@ func SnBms(data Bus) (uint32, uint32, string) {
 	return data1, data2, snStr
 }
 
-func SnBmsString(data Bus, coun uint32) string {
-	var tegangan string
+func SnBmsString(sn1 uint32, sn2 uint32) string {
+	// var tegangan string
+	sn1Bytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(sn1Bytes, sn1)
 
-	switch data.Num.Tegangan {
-	case "0":
-		tegangan = "12"
-	case "1":
-		tegangan = "24"
-	case "2":
-		tegangan = "36"
-	case "3":
-		tegangan = "48"
-	case "4":
-		tegangan = "60"
-	case "5":
-		tegangan = "72"
-	case "6":
-		tegangan = "84"
-	case "7":
-		tegangan = "96"
+	sn2Bytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(sn2Bytes, sn2)
+	fmt.Println("SN:", sn1, sn2)
+
+	// Byte 0
+	voltageMap := map[uint8]string{
+		0: "12", 1: "24", 2: "36", 3: "48", 4: "60", 5: "72", 6: "84", 7: "96",
 	}
-	message := fmt.Sprintf("%s%s%s%s%s%s%s%s%04d", tegangan, data.Num.ParalelN, data.Num.Jenis, data.Num.Type_, data.Num.Tahun_ex, data.Num.Bulan_ex, data.Num.Tahun_pb, data.Num.Bulan_pb, coun)
+	voltageCode := (sn1Bytes[0] >> 4) & 0x0F
+	parallel := sn1Bytes[0] & 0x0F
 
-	fmt.Printf("Serial number:%s", message)
-	return message
+	voltage, ok := voltageMap[voltageCode]
+	if !ok {
+		voltage = "??"
+	}
+
+	// Byte 1 - Cell Brand
+	cellBrand := string(sn1Bytes[1])
+
+	// Byte 2 - Battery Type
+	battType := string(sn1Bytes[2])
+
+	// Byte 3 - Year Cell
+	yearCell := int(sn1Bytes[3])
+
+	// Byte 4 - Year Pack
+	yearPack := int(sn2Bytes[0])
+
+	// Byte 5 - Month Pack & Cell
+	monthPack := int(sn2Bytes[1] & 0x0F)
+	monthCell := int((sn2Bytes[1] >> 4) & 0x0F)
+
+	// Byte 6-7 - Counter
+	counter := binary.BigEndian.Uint16(sn2Bytes[2:4])
+
+	// Final format: XX YY Z T AA CC BB DD NNNN
+	result := fmt.Sprintf("%s%02d%s%s%02d%02d%02d%02d%04d",
+		voltage, parallel, cellBrand, battType, yearCell, monthCell, yearPack, monthPack, counter)
+
+	// switch data.Num.Tegangan {
+	// case "0":
+	// 	tegangan = "12"
+	// case "1":
+	// 	tegangan = "24"
+	// case "2":
+	// 	tegangan = "36"
+	// case "3":
+	// 	tegangan = "48"
+	// case "4":
+	// 	tegangan = "60"
+	// case "5":
+	// 	tegangan = "72"
+	// case "6":
+	// 	tegangan = "84"
+	// case "7":
+	// 	tegangan = "96"
+	// }
+	// message := fmt.Sprintf("%s%s%s%s%s%s%s%s%04d", tegangan, data.Num.ParalelN, data.Num.Jenis, data.Num.Type_, data.Num.Tahun_ex, data.Num.Bulan_ex, data.Num.Tahun_pb, data.Num.Bulan_pb, coun)
+
+	fmt.Printf("Serial number:%s", result)
+	return result
 }
 
 func SnVCUString(sn1 uint32, sn2 uint32) string {

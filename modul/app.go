@@ -83,6 +83,7 @@ func Programflash(bord string) {
 	} else if strings.Contains(bord, "bms") {
 
 		ExecuteOpenOCDBMS(Data)
+		// ReadSN()
 
 		// tambahbaris(bord, "ayambakar")
 		// SnBmsString(Data, 2)

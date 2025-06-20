@@ -16,7 +16,8 @@ var MyWindow fyne.Window
 var RSLonlyflag uint8
 var QRcode string
 var Updateonlyflag uint8
-var namaapp = "PRODUKSI v1.5.2"
+var namaapp = "PRODUKSI v1.6.2"
+var IPcamera string
 
 func Loginapp() {
 	a := app.New()
@@ -559,7 +560,7 @@ func Guiapp(myApp fyne.App) {
 
 		if flashon == 1 {
 			entry := widget.NewEntry()
-			IPc := widget.NewEntry()
+			// IPc := widget.NewEntry()
 
 			resultLabel := widget.NewLabel("Klik tombol untuk mulai scan QR")
 
@@ -567,13 +568,12 @@ func Guiapp(myApp fyne.App) {
 				resultLabel.SetText("Scanning...")
 
 				go func() {
-					IPcame := IPc.Text
-					cameraURL := "http://" + IPcame + ":8080/shot.jpg"
+					// IPcamera = IPc.Text
+					cameraURL := "http://" + IPcamera + ":8080/shot.jpg"
 					text, err := ScanQRCodeFromURL(cameraURL)
 					if err != nil {
 						resultLabel.SetText("Gagal: " + err.Error())
 					} else {
-
 						entry.SetText(text)
 						resultLabel.SetText("Hasil QR: " + text)
 						dialog.ShowInformation("QR Code Ditemukan", text, MyWindow)
@@ -583,8 +583,8 @@ func Guiapp(myApp fyne.App) {
 			content := container.NewVBox(
 				widget.NewLabel("Masukkan QRCODE:"),
 				entry,
-				widget.NewLabel("Masukkan IPcamera:"),
-				IPc,
+				// widget.NewLabel("Masukkan IPcamera:"),
+				// IPc,
 				resultLabel,
 				butQRcode,
 			)
@@ -592,8 +592,7 @@ func Guiapp(myApp fyne.App) {
 			dialog.ShowCustomConfirm("Input QRCODE", "OK", "Cancel", content, func(b bool) {
 				if b {
 					QRcode = entry.Text
-					// label.SetText(fmt.Sprintf("Ini adalah namanya: %s", name))
-					fmt.Println("Selected: %s", QRcode)
+					fmt.Println("Selected:", QRcode)
 					dialog.ShowInformation("Info", "WAIT TO FLASH "+QRcode, MyWindow)
 					ProsesFlash()
 				}
@@ -667,8 +666,8 @@ func Guiapp(myApp fyne.App) {
 		UpdateonlyLabel,
 		check2,
 		submitButton,
-		widget.NewButton("Quit", func() {
-			myApp.Quit()
+		widget.NewButton("set IP Camera", func() {
+			ShowQRScannerDialog()
 		}),
 	)
 
@@ -685,4 +684,19 @@ func Dialoginfo(msg string) {
 
 func Dialogeror(msg string) {
 	dialog.ShowInformation("Error", msg, MyWindow)
+}
+
+func ShowQRScannerDialog() (string, error) {
+	IPc := widget.NewEntry()
+
+	content := container.NewVBox(
+		widget.NewLabel("Masukkan IPcamera:"),
+		IPc,
+	)
+
+	dialog.ShowCustomConfirm("Input QRCODE", "Tutup", "", content, func(ok bool) {
+		// OK di sini tidak terlalu berguna karena tombol utama adalah Scan QR
+		IPcamera = IPc.Text
+	}, MyWindow)
+	return QRcode, nil
 }

@@ -217,7 +217,7 @@ func UpdateBms(data Data_bms) map[string]interface{} {
 		fmt.Println("Error marshalling JSON:", err)
 		return nil
 	}
-
+	// url := "http://192.168.110.116:3005/bms/generate-sn"
 	// Membuat request POST dengan JSON
 	url := IP + "/bms/generate-sn"
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))

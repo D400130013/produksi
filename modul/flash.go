@@ -349,15 +349,15 @@ ulang:
 		typepack = "LOW"
 	}
 
-	if Updateonlyflag == 0 {
-		err = Updatestatus(sn, data.Bord, "SUCCESS", QRcode, data)
-		if err != nil {
-			Dialoginfo("gagal update server:" + err.Error())
-			return fmt.Errorf("gagal update server: %w", err)
-		}
-		tambahbaris(data.Bord, sn, typepack)
-
+	// if Updateonlyflag == 0 {
+	err = Updatestatus(sn, data.Bord, "SUCCESS", QRcode, data)
+	if err != nil {
+		Dialoginfo("gagal update server:" + err.Error())
+		return fmt.Errorf("gagal update server: %w", err)
 	}
+	tambahbaris(data.Bord, sn, typepack)
+
+	// }
 	Dialoginfo("flash sukses" + sn)
 	fmt.Println("OpenOCD eksekusi berhasil!", filePath)
 	// fmt.Println("Output:", string(output))
@@ -513,6 +513,7 @@ func ExecuteOpenOCDble(data Bus) error {
 func ReadSN() (uint32, uint32, string, error) {
 
 	inputFile := "test.bin"
+
 	// Membuat file test.bin
 	file, err := os.Create(inputFile)
 	if err != nil {
@@ -578,8 +579,9 @@ func ReadSN() (uint32, uint32, string, error) {
 		sn1 = binary.LittleEndian.Uint32(buffer[0:4]) // Ambil 4 byte pertama
 		sn2 = binary.LittleEndian.Uint32(buffer[4:8]) // Ambil 4 byte berikutnya
 	}
+	vSn := SnBmsString(sn1, sn2)
 	// fmt.Printf("SN1: %08x, SN2: %08x\n", sn1, sn2)
-	return sn1, sn2, "", nil
+	return sn1, sn2, vSn, nil
 }
 
 func ReadSNH7() (uint32, uint32, uint32, error) {
