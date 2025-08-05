@@ -35,7 +35,11 @@ func ExecuteOpenOCDvcu(data Bus) error {
 	sn = SnVCUString(datasn1, datasn2)
 	datasn3 := datasn2
 	if err != nil {
-		datasn1, datasn2, sn, id_ = SNVCU(data)
+		datasn1, datasn2, sn, id_, err = SNVCU(data)
+		if err != nil {
+			Dialogeror("Gagal Read SN" + err.Error())
+			return fmt.Errorf("gagal read sn: %w", err)
+		}
 		datasn3 = rearrangeBytes(datasn2)
 	}
 
@@ -308,6 +312,11 @@ func ExecuteOpenOCDBMS(data Bus) error {
 		datasn3 = rearrangeBytes(datasn2)
 	} else {
 		datasn1, datasn3, sn, _ = ReadSN()
+
+		if datasn1 == 0 || datasn3 == 0 {
+			Dialogeror("Gagal Read SN")
+			return fmt.Errorf("gagal read sn")
+		}
 	}
 	// numcoun := int((datasn2 & 0xffff0000) >> 16)
 
@@ -419,9 +428,84 @@ func CreateJLinkScriptkeyles(fileName string) error {
 func ExecuteOpenOCDkeyless(data Bus) error {
 	// filePath := "./bin/hmi/bootloader.bin"
 	// filePath1 := "./bin/hmi/application.bin"
+	updateonlyflag := true
 
 	filePath := fmt.Sprintf("./bin/keyless/%d/application.bin", data.Model)
-	datasn1, datasn2, sn := SNKeyless(data)
+	datasn1, datasn2, sn, err := ReadSNrsl10()
+	if err != nil {
+		Dialogeror("Gagal Read SN" + err.Error())
+		return fmt.Errorf("gagal read sn: %w", err)
+	}
+	if datasn1 == 0xffffffff {
+		datasn1, datasn2, sn, err = SNKeyless(data)
+		if err != nil {
+			Dialogeror("Gagal Read SN" + err.Error())
+			return fmt.Errorf("gagal read sn: %w", err)
+		}
+		updateonlyflag = false
+	}
+
+	// Periksa apakah file ada
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		fmt.Println("File gak ada")
+		Updatestatus(sn, data.Bord, "ERROR", "", data)
+		Dialogeror("Gagal Flash" + filePath)
+
+		return fmt.Errorf("file tidak ditemukan: %s", filePath)
+	}
+
+	datasn3 := rearrangeBytes(datasn2)
+	var cmd *exec.Cmd
+	// Perintah untuk menjalankan OpenOCD
+	if updateonlyflag {
+		cmd = exec.Command(".\\openocd\\bin\\openocd.exe",
+			"-f", ".\\openocd\\share\\openocd\\scripts\\interface\\jlink.cfg",
+			"-f", ".\\openocd\\share\\openocd\\scripts\\target\\rsl10.cfg",
+			"-c", fmt.Sprintf("adapter speed 1000; flash init; init; halt; flash protect 0 0 2 off; flash erase_sector 0 0 190; program %s 0x00100000; flash filld 0x0015f000 0x%08x%08x 1;halt;flash filld 0x0015f008 0x%08x%08x 1;halt; reset; exit;", filePath, datasn3, datasn1, data.Model, data.Versifirmapp))
+	} else {
+		cmd = exec.Command(".\\openocd\\bin\\openocd.exe",
+			"-f", ".\\openocd\\share\\openocd\\scripts\\interface\\jlink.cfg",
+			"-f", ".\\openocd\\share\\openocd\\scripts\\target\\rsl10.cfg",
+			"-c", fmt.Sprintf("adapter speed 1000; flash init; init; halt; flash protect 0 0 2 off; flash erase_sector 0 0 191; program %s 0x00100000; flash filld 0x0015f000 0x%08x%08x 1;halt;flash filld 0x0015f008 0x%08x%08x 1;halt; reset; exit;", filePath, datasn3, datasn1, data.Model, data.Versifirmapp))
+
+	}
+
+	// Jalankan perintah dan ambil output
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+
+		Updatestatus(sn, data.Bord, "ERROR", "", data)
+		Dialogeror("Gagal Flash" + filePath)
+		fmt.Println("Output:", string(output))
+		fmt.Println(cmd.String())
+		return fmt.Errorf("eksekusi OpenOCD gagal: %v. Output: %s", err, string(output))
+	}
+
+	fmt.Println("OpenOCD eksekusi berhasil!")
+	fmt.Println("Output:", string(output))
+	// Updatestatus(sn, data.Bord, "ERROR", "")
+	err = Updatestatus(sn, data.Bord, "SUCCESS", QRcode, data)
+	if err != nil {
+		Dialoginfo("gagal update server:" + err.Error())
+		return fmt.Errorf("gagal update server: %w", err)
+	}
+	Dialoginfo("flash sukses" + sn)
+	fmt.Println("OpenOCD eksekusi berhasil!", filePath)
+	tambahbaris(data.Bord, sn, data.Modelver)
+	// Updatestatus(sn, data.Bord, "SUCCESS", "")
+	return nil
+}
+
+func ExecuteOpenOCDkeylessUpdateOnly(data Bus) error {
+	// filePath := "./bin/hmi/bootloader.bin"
+	// filePath1 := "./bin/hmi/application.bin"
+
+	filePath := fmt.Sprintf("./bin/keyless/%d/application.bin", data.Model)
+	datasn1, datasn2, sn, err := SNKeyless(data)
+	if err != nil {
+		Dialogeror("Gagal Read SN" + err.Error())
+		return fmt.Errorf("gagal read sn: %w", err)
+	}
 	// Periksa apakah file ada
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		fmt.Println("File gak ada")
@@ -661,4 +745,82 @@ func ReadSNH7() (uint32, uint32, uint32, error) {
 	}
 	fmt.Printf("SN1: %08x, SN2: %08x id: %08x\n", sn1, sn2, id)
 	return sn1, sn2, id, nil
+}
+
+func ReadSNrsl10() (uint32, uint32, string, error) {
+
+	inputFile := "full_flash_dump.bin"
+
+	// Membuat file test.bin
+	file, err := os.Create(inputFile)
+	if err != nil {
+		panic(err) // Menangani kesalahan jika file tidak dapat dibuat
+	}
+	defer file.Close() // Menutup file setelah selesai
+	// cmd := exec.Command(".\\openocd\\bin\\openocd.exe",
+	// 	"-f", ".\\openocd\\share\\openocd\\scripts\\interface\\jlink.cfg",
+	// 	"-f", ".\\openocd\\share\\openocd\\scripts\\target\\rsl10.cfg",
+	// 	"-c", fmt.Sprintf("flash init; init; halt; flash read_bank 0 test.bin; shutdown;"))
+	cmd := exec.Command(".\\openocd\\bin\\openocd.exe",
+		"-f", ".\\openocd\\share\\openocd\\scripts\\interface\\jlink.cfg",
+		"-f", ".\\openocd\\share\\openocd\\scripts\\target\\rsl10.cfg",
+		"-c", "adapter speed 1000; init; halt; dump_image full_flash_dump.bin 0x0015f000 0x10; exit;")
+
+	// Jalankan perintah dan ambil output
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("eksekusi OpenOCD gagal: %v. Output: %s", err, string(output))
+		// Updatestatus(sn, data.Bord, "ERROR")
+		return 0, 0, "", fmt.Errorf("eksekusi OpenOCD gagal: %v. Output: %s", err, string(output))
+		// return fmt.Errorf("eksekusi OpenOCD gagal: %v. Output: %s", err, string(output))
+	}
+
+	// Offset dalam file (alamat memori)
+	offset := int64(0x0)
+	length := int64(8) // Jumlah byte yang ingin dibaca
+
+	// Buka file input
+	file, err = os.Open(inputFile)
+	if err != nil {
+		fmt.Printf("Gagal membuka file input: %v\n", err)
+		return 0, 0, "", fmt.Errorf("eksekusi OpenOCD gagal: %v. Output: %s", err, string(output))
+
+	}
+	defer file.Close()
+
+	// Pindah ke offset tertentu
+	_, err = file.Seek(offset, io.SeekStart)
+	if err != nil {
+		fmt.Printf("Gagal mencari offset dalam file: %v\n", err)
+		return 0, 0, "", fmt.Errorf("eksekusi OpenOCD gagal: %v. Output: %s", err, string(output))
+
+	}
+
+	// Baca 8 byte dari file
+	buffer := make([]byte, length)
+	n, err := file.Read(buffer)
+	if err != nil && err != io.EOF {
+		fmt.Printf("Gagal membaca file: %v\n", err)
+		return 0, 0, "", fmt.Errorf("eksekusi OpenOCD gagal: %v. Output: %s", err, string(output))
+
+	}
+
+	// Pastikan data yang dibaca sesuai panjang yang diinginkan
+	if int64(n) < length {
+		fmt.Printf("Data yang dibaca lebih sedikit dari panjang yang diminta: %d byte\n", n)
+		return 0, 0, "", fmt.Errorf("eksekusi OpenOCD gagal: %v. Output: %s", err, string(output))
+
+	}
+	// Cetak hasil data yang dibaca
+	// fmt.Printf("Data yang dibaca: %v\n", buffer)
+
+	// Mengonversi data dari buffer ke uint32 (misalnya)
+	var sn1, sn2 uint32
+	if len(buffer) >= 8 {
+		sn1 = binary.LittleEndian.Uint32(buffer[0:4]) // Ambil 4 byte pertama
+		sn2 = binary.LittleEndian.Uint32(buffer[4:8]) // Ambil 4 byte berikutnya
+	}
+	vSn, sn2f := SnKeylessString(sn1, sn2)
+	fmt.Printf("SN1: %08x, SN2: %08x\n", sn1, sn2f)
+	return sn1, sn2f, vSn, nil
 }

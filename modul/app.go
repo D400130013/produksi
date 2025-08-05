@@ -35,7 +35,7 @@ func Ceking_firmware(bord string) uint8 {
 					if CompareVersions(valueold, value[i]) {
 						HapusSemuaFileDalamFolder(bord)
 						Download_firmware(bord, key, value)
-						// _, versi := Verifikasi_versi(bord)
+
 						WriteVersionToFile(key, value, bord)
 						Setversifirmware(bord)
 						return 0
@@ -96,6 +96,7 @@ func Programflash(bord string) {
 		// ProgramKeyles()
 		// Implementasi untuk board yang mengandung "keyfob"
 		ExecuteOpenOCDkeyless(Data)
+		// ReadSNrsl10()
 	}
 }
 

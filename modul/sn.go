@@ -2,6 +2,7 @@ package modul
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"strconv"
 )
@@ -202,6 +203,57 @@ func SnVCUString(sn1 uint32, sn2 uint32) string {
 	// return ""
 }
 
+func SnKeylessString(sn1 uint32, sn2 uint32) (string, uint32) {
+	// Konversi sn1 ke array 4 byte
+	sn1Bytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(sn1Bytes, sn1)
+
+	// Konversi sn2 ke array 4 byte
+	sn2Bytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(sn2Bytes, sn2)
+	sn2f := uint32(sn2Bytes[2])<<24 | uint32(sn2Bytes[3])<<16 | uint32(sn2Bytes[1])<<8 | uint32(sn2Bytes[0]) // kerena di saat flash bayte 2 dan 3 dibalik lagi .
+
+	caun := uint16(sn2Bytes[2])<<8 | uint16(sn2Bytes[3])
+	fmt.Printf("Nilai caun: %d %02x %02x \n", caun, sn2Bytes[3], sn2Bytes[2])
+
+	message := fmt.Sprintf("%c%c%02d%02d%02d%04d", sn1Bytes[0], sn1Bytes[1], sn1Bytes[2], sn2Bytes[0], sn2Bytes[1], caun)
+
+	// // Contoh penggunaan bytes untuk membuat string
+	// // Misalnya kita ingin mengambil byte pertama dari sn1 sebagai tegangan
+	// tegangan := fmt.Sprintf("%c", sn1Bytes[0]>>4) // Mengambil 4 bit pertama
+
+	// // Mengambil 4 bit terakhir dari byte pertama sn1 untuk paralel
+	// paralel := fmt.Sprintf("%d", sn1Bytes[0]&0x0F)
+
+	// // Mengambil byte kedua sn1 untuk jenis
+	// jenis := string([]byte{sn1Bytes[1]})
+
+	// // Mengambil byte ketiga sn1 untuk tipe
+	// tipe := string([]byte{sn1Bytes[2]})
+
+	// // Mengambil byte keempat sn1 untuk tahun
+	// tahun := fmt.Sprintf("%d", 2000+int(sn1Bytes[3]))
+
+	// // Mengambil byte pertama sn2 untuk bulan
+	// bulan := fmt.Sprintf("%d", sn2Bytes[0])
+
+	// // Mengambil byte kedua sn2 untuk tahun produksi
+	// tahunPb := fmt.Sprintf("%d", 2000+int(sn2Bytes[1]))
+
+	// // Mengambil byte ketiga sn2 untuk bulan produksi
+	// bulanPb := fmt.Sprintf("%d", sn2Bytes[2])
+
+	// // Mengambil 2 byte terakhir sn2 untuk counter
+	// counter := binary.LittleEndian.Uint16(sn2Bytes[2:4])
+
+	// message := fmt.Sprintf("%s%s%s%s%s%s%s%s%04d",
+	//     tegangan, paralel, jenis, tipe, tahun, bulan, tahunPb, bulanPb, counter)
+
+	fmt.Printf("Serial number: %s\n", message)
+	return message, sn2f
+	// return ""
+}
+
 func SNhmi(data Bus) (uint32, uint32, string) {
 	data1 := uint32(0)
 	data2 := uint32(0)
@@ -247,7 +299,7 @@ func SNhmi(data Bus) (uint32, uint32, string) {
 	return data1, data2, snStr
 }
 
-func SNVCU(data Bus) (uint32, uint32, string, uint32) {
+func SNVCU(data Bus) (uint32, uint32, string, uint32, error) {
 	data1 := uint32(0)
 	data2 := uint32(0)
 	num3, err := strconv.Atoi(data.Num.Type_)
@@ -263,8 +315,10 @@ func SNVCU(data Bus) (uint32, uint32, string, uint32) {
 	}
 	respData := UpdateVcu(vcu)
 
-	if respData != nil {
+	if respData == nil {
 		// TODO handle
+		fmt.Println("Error: UpdateVcu tidak dapat dikonversi menjadi uint32")
+		return data1, data2, "", 0, errors.New("UpdateVcu tidak dapat dikonversi menjadi uint32")
 	}
 
 	snStr := respData["sn"].(string)
@@ -281,7 +335,7 @@ func SNVCU(data Bus) (uint32, uint32, string, uint32) {
 	counter, ok := detail["counter"].(float64)
 	if !ok {
 		fmt.Println("Error: detail['counter'] tidak dapat dikonversi menjadi uint32")
-		return data1, data2, "", 0
+		return data1, data2, "", 0, errors.New("detail['counter'] tidak dapat dikonversi menjadi uint32")
 	}
 
 	data2 |= (uint32(counter) & 0xffff) << 16
@@ -290,10 +344,10 @@ func SNVCU(data Bus) (uint32, uint32, string, uint32) {
 	fmt.Println("Counter:", counter)
 	// fmt.Printf("Converted number:%c %c ", data.Num.MCU[0], data.Num.MCU[1])
 	fmt.Printf("Converted number %d :%08x%08x", uint32(tmp), data1, data2)
-	return data1, data2, snStr, uint32(tmp)
+	return data1, data2, snStr, uint32(tmp), nil
 }
 
-func SNKeyless(data Bus) (uint32, uint32, string) {
+func SNKeyless(data Bus) (uint32, uint32, string, error) {
 	data1 := uint32(0)
 	data2 := uint32(0)
 	num3, err := strconv.Atoi(data.Num.Type_)
@@ -309,8 +363,10 @@ func SNKeyless(data Bus) (uint32, uint32, string) {
 	}
 	respData := UpdateKeyless(keyless)
 
-	if respData != nil {
+	if respData == nil {
 		// TODO handle
+		fmt.Println("Error: UpdateKeyless tidak dapat dikonversi menjadi uint32")
+		return data1, data2, "", errors.New("UpdateKeyless tidak dapat dikonversi menjadi uint32")
 	}
 
 	snStr := respData["sn"].(string)
@@ -325,7 +381,7 @@ func SNKeyless(data Bus) (uint32, uint32, string) {
 	counter, ok := detail["counter"].(float64)
 	if !ok {
 		fmt.Println("Error: detail['counter'] tidak dapat dikonversi menjadi uint32")
-		return data1, data2, ""
+		return data1, data2, "", errors.New("detail['counter'] tidak dapat dikonversi menjadi uint32")
 	}
 
 	data2 |= (uint32(counter) & 0xffff) << 16
@@ -334,5 +390,5 @@ func SNKeyless(data Bus) (uint32, uint32, string) {
 	fmt.Println("Counter:", counter)
 	// fmt.Printf("Converted number:%c %c ", data.Num.MCU[0], data.Num.MCU[1])
 	fmt.Printf("Converted number:%08x%08x", data1, data2)
-	return data1, data2, snStr
+	return data1, data2, snStr, nil
 }
