@@ -1,0 +1,5 @@
+application: v1.1.5
+bootloader: v0.1.1
+ble_application: v1.0.9
+ble_bootloader: v0.1.3
+tester: v0.1.1

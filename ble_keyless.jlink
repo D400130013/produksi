@@ -1,0 +1,4 @@
+Erase
+loadbin "./bin/keyless/1/application.bin", 0x00100000
+r
+q

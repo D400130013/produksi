@@ -1,0 +1,67 @@
+package main
+
+import (
+	"fmt"
+	"io"
+	"os"
+)
+
+func main() {
+	// Nama file input dan output
+	inputFile := "test.bin"
+	outputFile := "update.bin"
+
+	// Alamat yang diinginkan (offset dalam file)
+	offset := int64(0x4FE0) // Offset 0x4FE0
+	length := int64(32)     // Jumlah byte yang ingin dibaca
+
+	// Buka file input
+	file, err := os.Open(inputFile)
+	if err != nil {
+		fmt.Printf("Gagal membuka file input: %v\n", err)
+		return
+	}
+	defer file.Close()
+
+	// Pindah ke offset tertentu
+	_, err = file.Seek(offset, io.SeekStart)
+	if err != nil {
+		fmt.Printf("Gagal mencari offset dalam file: %v\n", err)
+		return
+	}
+
+	// Baca 32 byte dari file
+	buffer := make([]byte, length)
+	n, err := file.Read(buffer)
+	if err != nil && err != io.EOF {
+		fmt.Printf("Gagal membaca file: %v\n", err)
+		return
+	}
+
+	// Pastikan data yang dibaca sesuai panjang yang diinginkan
+	if int64(n) < length {
+		fmt.Printf("Data yang dibaca lebih sedikit dari panjang yang diminta: %d byte\n", n)
+		return
+	}
+
+	// Tulis ke file output
+	output, err := os.Create(outputFile)
+	if err != nil {
+		fmt.Printf("Gagal membuat file output: %v\n", err)
+		return
+	}
+	defer output.Close()
+
+	_, err = output.Write(buffer)
+	if err != nil {
+		fmt.Printf("Gagal menulis ke file output: %v\n", err)
+		return
+	}
+
+	fmt.Printf("Berhasil menyalin %d byte dari offset 0x%X ke %s\n", length, offset, outputFile)
+}
+
+
+Bearer eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Ijg5YjAxNWUyLWRiYzAtNDllMC05OWVhLTgzNTkyMDZiOTQ5ZSIsInJvbGVzIjpbNV0sImV4cCI6MTczNzc4ODA2NH0._2k3KHndiY80UsvXxQyiGUkK0Wz6xImKvLoydK18jb5vgbMzOBgpUJInbE4IM7-ebIbEWwAZI78iclnD4v8VrQ
+Bearer eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Ijg5YjAxNWUyLWRiYzAtNDllMC05OWVhLTgzNTkyMDZiOTQ5ZSIsInJvbGVzIjpbNV0sImV4cCI6MTczNzc4ODA2NH0._2k3KHndiY80UsvXxQyiGUkK0Wz6xImKvLoydK18jb5vgbMzOBgpUJInbE4IM7-ebIbEWwAZI78iclnD4v8VrQ
+Bearer eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Ijg5YjAxNWUyLWRiYzAtNDllMC05OWVhLTgzNTkyMDZiOTQ5ZSIsInJvbGVzIjpbNV0sImV4cCI6MTczNzc4ODA2NH0._2k3KHndiY80UsvXxQyiGUkK0Wz6xImKvLoydK18jb5vgbMzOBgpUJInbE4IM7-ebIbEWwAZI78iclnD4v8VrQ

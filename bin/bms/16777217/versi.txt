@@ -1,0 +1,2 @@
+bootloader: v1.0.0
+application: v1.1.7

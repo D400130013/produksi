@@ -1,0 +1,65 @@
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+)
+
+//	{
+//	    "mcu": "SB", // ST : STM32, MT: "Mobiletek"
+//	    "vehicle_type_id": 1, // 1 : s1p, 2 : s1, 3: a
+//	    "model_version": "1.1"
+//	}
+//
+// Data struct yang akan dikirimkan dalam body JSON
+type Data_vcu struct {
+	Mcu           string `json:"mcu"`             // ST : STM32, MT: "Mobiletek"
+	VehicleTypeID int    `json:"vehicle_type_id"` // 1 : s1p, 2 : s1, 3: a
+	ModelVersion  string `json:"model_version"`
+}
+
+func main() {
+	// Data yang akan dikirim sebagai JSON
+	data := Data_vcu{
+		Mcu:           "ST",
+		VehicleTypeID: 1,
+		ModelVersion:  "1.0.0",
+	}
+
+	// Konversi struct menjadi JSON
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		fmt.Println("Error marshalling JSON:", err)
+		return
+	}
+
+	// Membuat request POST dengan JSON
+	url := "http://192.168.110.61:3005/generate-sn/vcu"
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		fmt.Println("Error creating request:", err)
+		return
+	}
+
+	// Menambahkan header untuk tipe konten JSON
+	req.Header.Set("Content-Type", "application/json")
+
+	// Mengirim request menggunakan http.Client
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Error making request:", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Menampilkan response dari server
+	// defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body) // response body is []byte
+	fmt.Println(string(body))              // convert to string before print
+	// fmt.Println("Response Status:", resp.Body.Read())
+
+}

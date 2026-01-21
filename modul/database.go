@@ -3,11 +3,13 @@ package modul
 import (
 	"bytes"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 
 	_ "github.com/lib/pq"
 )
@@ -407,4 +409,99 @@ func Updatestatus(sn string, bord string, status string, qr_code string, data Bu
 	}
 	return err
 	// convert to string before print
+}
+
+type ResponseSN struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+	Data    struct {
+		SN       string `json:"sn"`
+		PartType string `json:"part_type"`
+		Id       uint32 `json:"device_id"`
+	} `json:"data"`
+}
+
+// GetPartInfo melakukan HTTP GET ke url dan mengembalikan SN & PartType
+func GetPartInfo(qr string) (uint32, uint32, uint32, string, error) {
+	GUID, err := Base64ToGUID(qr)
+	if err != nil {
+		return 0, 0, 0, "", err
+	}
+	url := "https://part.savart-ev.com/api/scan/" + GUID
+	fmt.Println(url)
+	resp, err := http.Get(url)
+	if err != nil {
+		return 0, 0, 0, "", err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return 0, 0, 0, "", err
+	}
+	fmt.Println(string(body))
+	var result ResponseSN
+	if err := json.Unmarshal(body, &result); err != nil {
+		return 0, 0, 0, "", err
+	}
+
+	// Jika status bukan 200, coba ambil pesan error dari payload
+	if resp.StatusCode != http.StatusOK {
+		if result.Code != "" || result.Message != "" {
+			return 0, 0, 0, "", fmt.Errorf("%s: %s", result.Code, result.Message)
+		}
+		return 0, 0, 0, "", fmt.Errorf("request failed with status: %s", resp.Status)
+	}
+
+	// Beberapa kasus 200 namun payload berisi kode error
+	if (result.Code != "" && strings.HasPrefix(result.Code, "ERR")) || result.Data.SN == "" || result.Data.PartType == "" {
+		msg := result.Message
+		if msg == "" {
+			msg = "response tidak berisi data SN/PartType"
+		}
+		code := result.Code
+		if code == "" {
+			code = "ERR:INVALID_RESPONSE"
+		}
+		fmt.Println(code)
+		fmt.Println(msg)
+		return 0, 0, 0, "", fmt.Errorf("%s: %s", code, msg)
+	}
+	fmt.Println(result.Data.SN)
+	fmt.Println(result.Data.PartType)
+	sn1, sn2, err := SNconvert(result.Data.SN, result.Data.PartType)
+	if err != nil {
+		return 0, 0, 0, "", err
+	}
+	fmt.Printf("SN1: %08x, SN2: %08x\n", sn1, sn2)
+	return sn1, sn2, result.Data.Id, result.Data.SN, nil
+}
+
+func Base64ToGUID(encoded string) (string, error) {
+	// Decode dari Base64 ke []byte
+	data, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return "", err
+	}
+
+	if len(data) != 16 {
+		return "", fmt.Errorf("data hasil decode harus 16 byte, dapat %d byte", len(data))
+	}
+
+	// Format ke string GUID
+	guid := fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
+		// 4 byte pertama
+		uint32(data[0])<<24|uint32(data[1])<<16|uint32(data[2])<<8|uint32(data[3]),
+		// 2 byte
+		uint16(data[4])<<8|uint16(data[5]),
+		// 2 byte
+		uint16(data[6])<<8|uint16(data[7]),
+		// 2 byte
+		uint16(data[8])<<8|uint16(data[9]),
+		// 6 byte terakhir
+		uint64(data[10])<<40|uint64(data[11])<<32|uint64(data[12])<<24|
+			uint64(data[13])<<16|uint64(data[14])<<8|uint64(data[15]),
+	)
+
+	return guid, nil
 }

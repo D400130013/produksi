@@ -74,17 +74,28 @@ func Programflash(bord string) {
 			if ExecuteOpenOCDble(Data) == nil {
 				ExecuteOpenOCDvcu(Data)
 			}
+			// datasn1, datasn2, _, _ := ReadSNH7()
+			// fmt.Printf("SN1: %08x, SN2: %08x\n", datasn1, datasn2)
+			// datasn1, datasn2, id_, _, _ := GetPartInfo(QRcode)
+			// fmt.Printf("SN1: %08x, SN2: %08x id: %d\n", datasn1, datasn2, id_)
 		}
 		// Implementasi untuk board yang mengandung "vcu"
 	} else if strings.Contains(bord, "hmi") {
 		ExecuteOpenOCDhmi(Data)
+		// ReadSNH7HMI()
+		// datasn1, datasn2, _, _ := ReadSNH7HMI()
+		// fmt.Printf("SN1: %08x, SN2: %08x\n", datasn1, datasn2)
+		// datasn1, datasn2, _, _, _ := GetPartInfo(QRcode)
+		// fmt.Printf("SN1: %08x, SN2: %08x\n", datasn1, datasn2)
+		// fmt.Printf("SN1: %08x, SN2: %08x\n", datasn1, datasn2)
 		// SNhmi(Data)
 		// Implementasi untuk board yang mengandung "hmi"
 	} else if strings.Contains(bord, "bms") {
 
 		ExecuteOpenOCDBMS(Data)
 		// ReadSN()
-
+		// datasn1, datasn2, _, _, _ := GetPartInfo(QRcode)
+		// fmt.Printf("SN1: %08x, SN2: %08x\n", datasn1, datasn2)
 		// tambahbaris(bord, "ayambakar")
 		// SnBmsString(Data, 2)
 		// SnBms(Data)
@@ -96,6 +107,12 @@ func Programflash(bord string) {
 		// ProgramKeyles()
 		// Implementasi untuk board yang mengandung "keyfob"
 		ExecuteOpenOCDkeyless(Data)
+		// datasn1, datasn2, _, _, _ := GetPartInfo(QRcode)
+		// fmt.Printf("SN1: %08x, SN2: %08x\n", datasn1, datasn2)
+		// datasn1, datasn2, _, _ := ReadSNrsl10()
+		// fmt.Printf("SN1: %08x, SN2: %08x\n", datasn1, datasn2)
+		// datasn1, datasn2, _, _ = GetPartInfo(QRcode)
+		// fmt.Printf("SN1: %08x, SN2: %08x\n", datasn1, datasn2)
 		// ReadSNrsl10()
 	}
 }

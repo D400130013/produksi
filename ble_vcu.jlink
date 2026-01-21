@@ -1,0 +1,6 @@
+Erase
+loadbin "./bin/vcu/16908288/ble-bootloader.bin", 0x00100000
+r
+loadbin "./bin/vcu/16908288/ble-application.bin", 0x00107000
+r
+q

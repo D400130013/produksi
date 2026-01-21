@@ -1,0 +1,313 @@
+func main() {
+	fmt.Printf("data hellow")
+	myApp := app.New()
+	myWindow := myApp.NewWindow("PRODUKSI")
+
+	// Mengatur ukuran jendela
+	myWindow.Resize(fyne.NewSize(400, 600))
+
+	// Data untuk tipe cell dan tipe battery dari Excel
+	typeCellMap := make(map[string][]string)
+	// Membaca file Excel dan mengisi typeCellMap
+	filePath := "battrymenu.xlsx" // Ganti dengan path file Excel yang benar
+	f, err := excelize.OpenFile(filePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	rows, err := f.GetRows("Sheet1") // Ganti dengan nama sheet yang benar
+	if err != nil {
+		log.Fatal(err)
+	}
+	// Mengisi typeCellMap berdasarkan data dari Excel
+	for _, row := range rows {
+		if len(row) >= 2 {
+
+			tipeCell := row[0]
+			tipeBattery := row[1]
+			typeCellMap[tipeCell] = append(typeCellMap[tipeCell], tipeBattery)
+		}
+	}
+
+	// Membuat dropdown dengan pilihan
+	options := []string{"vcu", "bms", "hmi", "keyless"}
+	dropdown := widget.NewSelect(options, func(selected string) {
+		myWindow.SetTitle("PRODUKSI " + selected)
+		// myWindow.SetTitle("Pilihan: " + selected)
+	})
+
+	// Membuat label dan entry untuk jumlah paralel
+	modelidLabel := widget.NewLabel("Masukkan modelid:")
+	modelidEntry := widget.NewEntry()
+	modelidLabel.Hide() // Disembunyikan awalnya
+	modelidEntry.Hide() // Disembunyikan awalnya
+	// Membuat label dan entry untuk SN
+	parallelsLabel := widget.NewLabel("Masukkan Jumlah parallels:")
+	parallelsEntry := widget.NewEntry()
+	parallelsLabel.Hide() // Disembunyikan awalnya
+	parallelsEntry.Hide() // Disembunyikan awalnya
+
+	// Opsi untuk dropdown bulan dan tahun
+	months := []string{"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"}
+	years := []string{"2020", "2021", "2022", "2023", "2024", "2025", "2026", "2027", "2028", "2029", "2030"}
+
+	// Membuat dropdown untuk Bulan/Tahun Battery
+	batteryLabel := widget.NewLabel("Bulan/Tahun Battery:")
+	batteryMonthDropdown := widget.NewSelect(months, nil)
+	batteryYearDropdown := widget.NewSelect(years, nil)
+	batteryLabel.Hide()
+	batteryMonthDropdown.Hide()
+	batteryYearDropdown.Hide()
+
+	// Membuat dropdown untuk Bulan/Tahun Pembuatan Cell
+	cellLabel := widget.NewLabel("Bulan/Tahun Pembuatan Cell:")
+	cellMonthDropdown := widget.NewSelect(months, nil)
+	cellYearDropdown := widget.NewSelect(years, nil)
+	cellLabel.Hide()
+	cellMonthDropdown.Hide()
+	cellYearDropdown.Hide()
+
+	// Membuat dropdown untuk Tipe Cell
+	cellbrandLabel := widget.NewLabel("Brand Cell:")
+	cellbrandOptions := make([]string, 0, len(typeCellMap))
+	for key := range typeCellMap {
+		cellbrandOptions = append(cellbrandOptions, key)
+	}
+	cellbrandDropdown := widget.NewSelect(cellbrandOptions, nil)
+	cellbrandLabel.Hide()
+	cellbrandDropdown.Hide()
+	cellTypeLabel := widget.NewLabel("Tipe Cell:")
+	cellTypeDropdown := widget.NewSelect([]string{}, nil)
+	cellTypeLabel.Hide()
+	cellTypeDropdown.Hide()
+	// Variabel untuk menyimpan Brand cell terpilih
+	var cellbrandShort string
+
+	// Logika untuk menentukan huruf berdasarkan pilihan tipe cell
+	cellbrandDropdown.OnChanged = func(selected string) {
+
+		cellbrandShort = modul.GetFirstLetter(selected)
+		if batteries, ok := typeCellMap[selected]; ok {
+			cellTypeDropdown.Options = batteries
+			cellTypeDropdown.Refresh() // Refresh untuk memperbarui pilihan
+		}
+		cellTypeLabel.Show()    // Menampilkan label Tipe Battery
+		cellTypeDropdown.Show() // Menampilkan dropdown Tipe Battery
+	}
+
+	// Variabel untuk menyimpan tipe cell terpilih
+	var cellTypeShort string
+
+	// Logika untuk menentukan huruf berdasarkan pilihan tipe cell
+	cellTypeDropdown.OnChanged = func(selected string) {
+		if selected != "" {
+			cellTypeShort = modul.GetFirstLetter(selected)
+		}
+
+	}
+
+	// Membuat dropdown untuk tegangan
+	teganganLabel := widget.NewLabel("Tegangan Battry:")
+	teganganOptions := []string{"12", "24", "36", "48", "60", "72", "84", "96"}
+	teganganDropdown := widget.NewSelect(teganganOptions, nil)
+	teganganLabel.Hide()
+	teganganDropdown.Hide()
+
+	// Variabel untuk menyimpan tipe cell terpilih
+	var teganganShort string
+
+	// Logika untuk menentukan huruf berdasarkan pilihan tipe cell
+	teganganDropdown.OnChanged = func(selected string) {
+		switch selected {
+		case "12":
+			teganganShort = "0"
+		case "24":
+			teganganShort = "1"
+		case "36":
+			teganganShort = "2"
+		case "48":
+			teganganShort = "3"
+		case "60":
+			teganganShort = "4"
+		case "72":
+			teganganShort = "5"
+		case "84":
+			teganganShort = "6"
+		case "96":
+			teganganShort = "7"
+		default:
+			teganganShort = ""
+		}
+	}
+
+	// Menambahkan RadioGroup untuk Hardware Model (High Set & Low Set)
+	hardwareLabel := widget.NewLabel("Hardware Model:")
+	hardwareOptions := []string{"High Set", "Low Set"}
+	hardwareRadioGroup := widget.NewRadioGroup(hardwareOptions, nil)
+	hardwareLabel.Hide()
+	hardwareRadioGroup.Hide()
+
+	// Variabel untuk menyimpan nilai angka dari Hardware Model
+	var hardwareModelValue uint32
+
+	// Logika untuk menentukan nilai berdasarkan pilihan Hardware Model
+	hardwareRadioGroup.OnChanged = func(selected string) {
+		if selected == "High Set" {
+			hardwareModelValue = 2
+		} else if selected == "Low Set" {
+			hardwareModelValue = 1
+		}
+	}
+	// Membuat container horizontal untuk Hardware Model (High Set & Low Set)
+	hardwareRow := container.NewHBox(
+		hardwareLabel,
+		hardwareRadioGroup,
+	)
+	// Mengubah fungsi dropdown agar menampilkan input ketika "bms" dipilih
+	dropdown.OnChanged = func(selected string) {
+		myWindow.SetTitle("PRODUKSI " + selected)
+		if selected == "bms" {
+			modelidLabel.Show()
+			modelidEntry.Show()
+			parallelsLabel.Show()
+			parallelsEntry.Show()
+			batteryLabel.Show()
+			batteryMonthDropdown.Show()
+			batteryYearDropdown.Show()
+			cellLabel.Show()
+			cellMonthDropdown.Show()
+			cellYearDropdown.Show()
+			cellbrandLabel.Show()
+			cellbrandDropdown.Show()
+			teganganLabel.Show()
+			teganganDropdown.Show()
+			hardwareLabel.Show()
+			hardwareRadioGroup.Show()
+		} else {
+			modelidLabel.Hide() // Disembunyikan awalnya
+			modelidEntry.Hide()
+			parallelsLabel.Hide()
+			parallelsEntry.Hide()
+			batteryLabel.Hide()
+			batteryMonthDropdown.Hide()
+			batteryYearDropdown.Hide()
+			cellLabel.Hide()
+			cellMonthDropdown.Hide()
+			cellYearDropdown.Hide()
+			cellbrandLabel.Hide()
+			cellbrandDropdown.Hide()
+			cellTypeLabel.Hide()
+			cellTypeDropdown.Hide()
+			teganganLabel.Hide()
+			teganganDropdown.Hide()
+			hardwareLabel.Hide()
+			hardwareRadioGroup.Hide()
+		}
+	}
+
+	// Menambahkan tombol Submit
+	submitButton := widget.NewButton("Program", func() {
+		if dropdown.Selected == "bms" {
+			// Validasi jika SN atau input lain kosong
+			if parallelsEntry.Text == "" || batteryMonthDropdown.Selected == "" || batteryYearDropdown.Selected == "" ||
+				cellMonthDropdown.Selected == "" || cellYearDropdown.Selected == "" || cellTypeShort == "" {
+				dialog.ShowInformation("Error", "Semua field harus diisi!", myWindow)
+			} else {
+				modul.Data.Num.Tegangan = teganganShort
+				modul.Data.Num.ParalelN = parallelsEntry.Text
+				modul.Data.Num.Jenis = cellbrandShort
+				modul.Data.Num.Type_ = cellTypeShort
+				modul.Data.Num.Bulan_pb = batteryMonthDropdown.Selected
+				modul.Data.Num.Tahun_pb = batteryYearDropdown.Selected
+				modul.Data.Num.Bulan_ex = cellMonthDropdown.Selected
+				modul.Data.Num.Tahun_ex = cellYearDropdown.Selected
+				modul.Data.Id = hardwareModelValue
+				modul.Data.Model, _ = modul.VersionToHex(modelidEntry.Text)
+				modul.Data.Bord = dropdown.Selected
+				dialog.ShowInformation("Info", "SN "+modul.Data.Num.Tegangan+modul.Data.Num.ParalelN+modul.Data.Num.Jenis+modul.Data.Num.Type_+modul.Data.Num.Tahun_ex+modul.Data.Num.Bulan_pb+modul.Data.Num.Tahun_pb+modul.Data.Num.Bulan_pb, myWindow)
+				modul.ProsesFlash()
+			}
+		} else {
+			dialog.ShowInformation("Info", "Pilihan: "+dropdown.Selected, myWindow)
+		}
+	})
+
+	// Susun dropdown bulan dan tahun di satu baris untuk Battery
+	batteryRow := container.NewHBox(
+		batteryMonthDropdown,
+		batteryYearDropdown,
+	)
+
+	// Susun dropdown bulan dan tahun di satu baris untuk Cell
+	cellRow := container.NewHBox(
+		cellMonthDropdown,
+		cellYearDropdown,
+	)
+	jeniscellRow := container.NewHBox(
+		cellbrandLabel,
+		cellbrandDropdown,
+		cellTypeLabel,
+		cellTypeDropdown,
+	)
+	settingBattryRow := container.NewHBox(
+		teganganLabel,
+		teganganDropdown,
+		parallelsLabel,
+		parallelsEntry,
+	)
+
+	// Susun konten dalam tampilan vertikal
+	content := container.NewVBox(
+		widget.NewLabel("Pilih opsi:"),
+		dropdown,
+		modelidLabel,
+		modelidEntry,
+		settingBattryRow,
+		jeniscellRow,
+		cellLabel,
+		cellRow,
+		batteryLabel,
+		batteryRow,
+		hardwareRow,
+		submitButton,
+		widget.NewButton("Quit", func() {
+			myApp.Quit()
+		}),
+	)
+
+	// Mengatur konten ke dalam jendela
+	myWindow.SetContent(content)
+
+	// Menampilkan jendela
+	myWindow.ShowAndRun()
+}
+
+.\openocd\bin\openocd.exe -f .\openocd\share\openocd\scripts\interface\stlink-v2.cfg -f .\openocd\share\openocd\scripts\target\stm32h7x_dual_bank.cfg -c "flash init; init; halt; flash erase_sector 0 0 7; flash erase_sector 1 0 5; flash write_image erase 0 ./bin/hmi/Bootloader.bin 0x08000000;halt;  flash filld 0x0803FFF0 0x0000000000000001 1; flash filld 0x0803FFF8 0x08000A1801535453 1 flash write_image erase 0 ./bin/hmi/Application.bin 0x08040000; halt;flash filld 0x081bfff8 0x000000ea00000000 1;halt; reset; exit"
+.\openocd\bin\openocd.exe -f .\openocd\share\openocd\scripts\interface\stlink-v2.cfg -f .\openocd\share\openocd\scripts\target\stm32h7x_dual_bank.cfg -c "flash init; init; halt;  flash write_image erase 0 ./bin/hmi/Bootloader.bin 0x08000000;halt;  flash write_image erase 0 ./bin/hmi/Application.bin 0x08040000; halt; reset; exit"
+.\openocd\bin\openocd.exe -f .\openocd\share\openocd\scripts\interface\stlink-v2.cfg -f .\openocd\share\openocd\scripts\target\stm32h7x_dual_bank.cfg -c "flash init; init; halt; flash erase_address 0x0803FFF0 32; flash erase_address 0x081bfff0 32; flash filld 0x0803fff0 0x08000a1801535453 1; flash filld 0x0803FFF8 0x0000000000000001 1;halt;flash filld 0x081bfff8 0x000000ea00000000 1;halt; reset; exit"
+
+
+.\openocd\bin\openocd.exe -f .\openocd\share\openocd\scripts\interface\stlink-v2.cfg -f .\openocd\share\openocd\scripts\target\stm32h7x_dual_bank.cfg -c "init; halt; flash erase_sector 0 0 7; flash erase_sector 1 0 5; flash write_image erase ./bin/hmi/Bootloader.bin 0x08000000; halt; flash filld 0x0803FFF0 0x0000000000000001 1; flash filld 0x0803FFF8 0x08000A1801535453 1; flash write_image erase ./bin/hmi/Application.bin 0x08040000; halt; flash filld 0x081bfff8 0x000000ea00000000 1; halt; reset; exit"
+
+.\openocd\bin\openocd.exe -f .\openocd\share\openocd\scripts\interface\stlink-v2.cfg -f .\openocd\share\openocd\scripts\target\stm32h7x_dual_bank.cfg -c "init; halt; flash erase_sector 0 0 7; flash erase_sector 1 0 5; program ./bin/hmi/Bootloader.bin 0x08000000; flash filld 0x0803FFe0 0x08000A1801535453 1; halt; program ./bin/hmi/Application.bin 0x08040000;halt; flash filld 0x0803FFF8 0x0000000000000001 1; flash filld 0x081BFFE8 0x000000EA00000000 1;halt;reset;exit"
+
+.\openocd\bin\openocd.exe -f .\openocd\share\openocd\scripts\interface\stlink-v2.cfg -f .\openocd\share\openocd\scripts\target\stm32h7x_dual_bank.cfg -c "init; halt; flash erase_sector 1 0 5; flash write_image erase ./bin/hmi/Bootloader.bin 0x08000000;halt; flash filld 0x0803ffe0 0x08000a1801535453 1;halt; flash filld 0x0803fff8 0x0000000000000001 1; flash write_image erase ./bin/hmi/Application.bin 0x08040000; halt;flash filld 0x081bfff8 0x000000ea00000000 1; reset; exit"
+
+.\openocd\bin\openocd.exe -f .\openocd\share\openocd\scripts\interface\stlink-v2.cfg -f .\openocd\share\openocd\scripts\target\stm32h7x_dual_bank.cfg -c "init; halt; flash filld 0x0803FFE0 0x08000A1801535453 1;flash filld 0x0803FFF8 0x0000000000000001 1;flash filld 0x081BFFF8 0x000000EA00000000 1;halt;reset;exit"
+
+
+
+.\openocd\bin\openocd.exe -f .\openocd\share\openocd\scripts\interface\stlink-v2.cfg -f .\openocd\share\openocd\scripts\target\stm32h7x_dual_bank.cfg -c "init; reset; halt; flash erase_sector 0 0 7; flash erase_sector 1 0 5; program ./bin/vcu/bootloader.bin 0x08000000; flash filld 0x0803fff8 0x0000003401020000 1;halt; program ./bin/vcu/application.bin 0x08040000; halt;flash filld 0x0803FFD0 0x08000b1800015453 1 ; halt; flash filld 0x080ffff8 0x0000000000010000 1; halt; reset; exit"
+
+
+
+.\openocd\bin\openocd.exe -f .\openocd\share\openocd\scripts\interface\stlink-v2.cfg -f .\openocd\share\openocd\scripts\target\stm32h7x_dual_bank.cfg -c "init; halt;flash erase_sector 0 0 7; flash erase_sector 1 0 5; stm32h7x option_write 0 0x20 0x8000000 0x8000000; reset; exit"
+
+.\openocd\bin\openocd.exe -f .\openocd\share\openocd\scripts\interface\jlink.cfg -f .\openocd\share\openocd\scripts\target\rsl10.cfg -c "adapter speed 1000; init; halt; flash write_image erase ./bin/keyless/1/application.bin 0x00100000; reset; exit;"
+
+.\openocd\bin\openocd.exe -f .\openocd\share\openocd\scripts\interface\jlink.cfg -f .\openocd\share\openocd\scripts\target\rsl10.cfg -c "adapter speed 1000; flash init; init; halt; flash protect 0 0 191 off; flash erase_sector 0 0 2; program ./bin/keyless/1/application.bin 0x00100000; flash filld 0x0015fff0 0x0000003401020000 1;halt;flash filld 0x0015fff8 0x0000003401020000 1;halt; reset; exit;"
+
+AZeMgbWMejibAK2x9H6KAQ==
+
+STS0125080001
+AZYYYmFSfWW6LpZMVt7slg==

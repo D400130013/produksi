@@ -34,13 +34,17 @@ func ExecuteOpenOCDvcu(data Bus) error {
 	datasn1, datasn2, id_, err := ReadSNH7()
 	sn = SnVCUString(datasn1, datasn2)
 	datasn3 := datasn2
-	if err != nil {
-		datasn1, datasn2, sn, id_, err = SNVCU(data)
+	if err != nil || datasn1 == 0xffffffff || datasn2 == 0xffffffff {
+		datasn1, datasn3, id_, sn, err = GetPartInfo(QRcode)
 		if err != nil {
-			Dialogeror("Gagal Read SN" + err.Error())
-			return fmt.Errorf("gagal read sn: %w", err)
+			datasn1, datasn2, sn, id_, err = SNVCU(data)
+			if err != nil {
+				Dialogeror("Gagal Read SN" + err.Error())
+				return fmt.Errorf("gagal read sn: %w", err)
+			}
+			datasn3 = rearrangeBytes(datasn2)
 		}
-		datasn3 = rearrangeBytes(datasn2)
+
 	}
 
 	data.Id = id_
@@ -193,7 +197,23 @@ func ExecuteOpenOCDhmi(data Bus) error {
 	// filePath1 := "./bin/hmi/application.bin"
 	filePath := fmt.Sprintf("./bin/hmi/%d/bootloader.bin", data.Model)
 	filePath1 := fmt.Sprintf("./bin/hmi/%d/application.bin", data.Model)
-	datasn1, datasn2, sn := SNhmi(data)
+	datasn1, datasn2, sn, err := ReadSNH7HMI()
+	if err != nil {
+		datasn1, datasn2, _, sn, err = GetPartInfo(QRcode)
+		if err != nil {
+			datasn1, datasn2, sn, err = SNhmi(data)
+			if err != nil {
+				Dialogeror("Gagal Read SN" + err.Error())
+				return fmt.Errorf("gagal read sn: %w", err)
+			}
+		}
+
+		// Dialogeror("Gagal Read SN" + err.Error())
+		// return fmt.Errorf("gagal read sn: %w", err)
+	}
+
+	// sn := SnHmiString(datasn1, datasn2)
+
 	bintmp := "output.bin"
 	bintmp1 := "output1.bin"
 	dummy := uint64(0xffffffff)
@@ -306,6 +326,7 @@ func ExecuteOpenOCDBMS(data Bus) error {
 	var datasn1 uint32
 	var datasn2 uint32
 	var datasn3 uint32
+	var err error
 	var sn string
 	if Updateonlyflag == 0 {
 		datasn1, datasn2, sn = SnBms(data)
@@ -314,8 +335,12 @@ func ExecuteOpenOCDBMS(data Bus) error {
 		datasn1, datasn3, sn, _ = ReadSN()
 
 		if datasn1 == 0 || datasn3 == 0 {
-			Dialogeror("Gagal Read SN")
-			return fmt.Errorf("gagal read sn")
+			datasn1, datasn3, _, sn, err = GetPartInfo(QRcode)
+			if err != nil {
+				Dialogeror("Gagal Read SN" + err.Error())
+				return fmt.Errorf("gagal read sn: %w", err)
+			}
+
 		}
 	}
 	// numcoun := int((datasn2 & 0xffff0000) >> 16)
@@ -437,12 +462,16 @@ func ExecuteOpenOCDkeyless(data Bus) error {
 		return fmt.Errorf("gagal read sn: %w", err)
 	}
 	if datasn1 == 0xffffffff {
-		datasn1, datasn2, sn, err = SNKeyless(data)
+		datasn1, datasn2, _, sn, err = GetPartInfo(QRcode)
 		if err != nil {
-			Dialogeror("Gagal Read SN" + err.Error())
-			return fmt.Errorf("gagal read sn: %w", err)
+			datasn1, datasn2, sn, err = SNKeyless(data)
+			if err != nil {
+				Dialogeror("Gagal Read SN" + err.Error())
+				return fmt.Errorf("gagal read sn: %w", err)
+			}
+			updateonlyflag = false
 		}
-		updateonlyflag = false
+
 	}
 
 	// Periksa apakah file ada
@@ -664,6 +693,9 @@ func ReadSN() (uint32, uint32, string, error) {
 		sn2 = binary.LittleEndian.Uint32(buffer[4:8]) // Ambil 4 byte berikutnya
 	}
 	vSn := SnBmsString(sn1, sn2)
+	if sn1 == 0xffffffff || sn2 == 0xffffffff {
+		return 0, 0, "", fmt.Errorf("sn tidak valid")
+	}
 	// fmt.Printf("SN1: %08x, SN2: %08x\n", sn1, sn2)
 	return sn1, sn2, vSn, nil
 }
@@ -745,6 +777,83 @@ func ReadSNH7() (uint32, uint32, uint32, error) {
 	}
 	fmt.Printf("SN1: %08x, SN2: %08x id: %08x\n", sn1, sn2, id)
 	return sn1, sn2, id, nil
+}
+
+func ReadSNH7HMI() (uint32, uint32, string, error) {
+
+	inputFile := "test.bin"
+	// Membuat file test.bin
+	file, err := os.Create(inputFile)
+	if err != nil {
+		panic(err) // Menangani kesalahan jika file tidak dapat dibuat
+	}
+	defer file.Close() // Menutup file setelah selesai
+	cmd := exec.Command(".\\openocd\\bin\\openocd.exe",
+		"-f", ".\\openocd\\share\\openocd\\scripts\\interface\\stlink-v2.cfg",
+		"-f", ".\\openocd\\share\\openocd\\scripts\\target\\stm32h7x_dual_bank.cfg",
+		"-c", fmt.Sprintf("flash init; init; halt; flash read_bank 0 test.bin; shutdown;"))
+
+	// Jalankan perintah dan ambil output
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("eksekusi OpenOCD gagal: %v. Output: %s", err, string(output))
+		// Updatestatus(sn, data.Bord, "ERROR")
+		return 0, 0, "", fmt.Errorf("eksekusi OpenOCD gagal: %v. Output: %s", err, string(output))
+		// return fmt.Errorf("eksekusi OpenOCD gagal: %v. Output: %s", err, string(output))
+	}
+
+	// Offset dalam file (alamat memori)
+	offset := int64(0x3ffd0)
+	length := int64(32) // Jumlah byte yang ingin dibaca
+
+	// Buka file input
+	file, err = os.Open(inputFile)
+	if err != nil {
+		fmt.Printf("Gagal membuka file input: %v\n", err)
+		return 0, 0, "", fmt.Errorf("eksekusi OpenOCD gagal: %v. Output: %s", err, string(output))
+
+	}
+	defer file.Close()
+
+	// Pindah ke offset tertentu
+	_, err = file.Seek(offset, io.SeekStart)
+	if err != nil {
+		fmt.Printf("Gagal mencari offset dalam file: %v\n", err)
+		return 0, 0, "", fmt.Errorf("eksekusi OpenOCD gagal: %v. Output: %s", err, string(output))
+
+	}
+
+	// Baca 8 byte dari file
+	buffer := make([]byte, length)
+	n, err := file.Read(buffer)
+	if err != nil && err != io.EOF {
+		fmt.Printf("Gagal membaca file: %v\n", err)
+		return 0, 0, "", fmt.Errorf("eksekusi OpenOCD gagal: %v. Output: %s", err, string(output))
+
+	}
+
+	// Pastikan data yang dibaca sesuai panjang yang diinginkan
+	if int64(n) < length {
+		fmt.Printf("Data yang dibaca lebih sedikit dari panjang yang diminta: %d byte\n", n)
+		return 0, 0, "", fmt.Errorf("eksekusi OpenOCD gagal: %v. Output: %s", err, string(output))
+
+	}
+	// Cetak hasil data yang dibaca
+	fmt.Printf("Data yang dibaca: %v\n", buffer)
+
+	// Mengonversi data dari buffer ke uint32 (misalnya)
+	var sn1, sn2 uint32
+	if len(buffer) >= 8 {
+		sn1 = binary.LittleEndian.Uint32(buffer[0:4]) // Ambil 4 byte pertama
+		sn2 = binary.LittleEndian.Uint32(buffer[4:8]) // Ambil 4 byte berikutnya
+		if sn2 == 0xffffffff {
+			return 0, 0, "", fmt.Errorf("version tidak valid")
+		}
+		// id = binary.LittleEndian.Uint32(buffer[28:32])
+	}
+	fmt.Printf("SN1: %08x, SN2: %08x\n", sn1, sn2)
+	vSn, sn2f := SnHmiString(sn1, sn2)
+	return sn1, sn2f, vSn, nil
 }
 
 func ReadSNrsl10() (uint32, uint32, string, error) {

@@ -1,0 +1,4 @@
+application: v0.1.4
+bootloader: v0.1.0
+ble_application: v0.1.0
+ble_bootloader: v0.1.0

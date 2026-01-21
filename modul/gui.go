@@ -3,6 +3,7 @@ package modul
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -16,7 +17,7 @@ var MyWindow fyne.Window
 var RSLonlyflag uint8
 var QRcode string
 var Updateonlyflag uint8
-var namaapp = "PRODUKSI v1.6.7"
+var namaapp = "PRODUKSI v1.7.0"
 var IPcamera string
 
 func Loginapp() {
@@ -560,6 +561,7 @@ func Guiapp(myApp fyne.App) {
 
 		if flashon == 1 {
 			entry := widget.NewEntry()
+			outscan := 1
 			// IPc := widget.NewEntry()
 
 			resultLabel := widget.NewLabel("Klik tombol untuk mulai scan QR")
@@ -570,13 +572,22 @@ func Guiapp(myApp fyne.App) {
 				go func() {
 					// IPcamera = IPc.Text
 					cameraURL := "http://" + IPcamera + ":8080/shot.jpg"
-					text, err := ScanQRCodeFromURL(cameraURL)
-					if err != nil {
-						resultLabel.SetText("Gagal: " + err.Error())
-					} else {
-						entry.SetText(text)
-						resultLabel.SetText("Hasil QR: " + text)
-						dialog.ShowInformation("QR Code Ditemukan", text, MyWindow)
+					for {
+						text, err := ScanQRCodeFromURL(cameraURL)
+						if err != nil {
+							resultLabel.SetText("Gagal: " + err.Error())
+
+						} else {
+							entry.SetText(text)
+							resultLabel.SetText("Hasil QR: " + text)
+							dialog.ShowInformation("QR Code Ditemukan", text, MyWindow)
+							break
+						}
+						time.Sleep(1 * time.Second)
+						resultLabel.SetText("Scanning...")
+						if outscan == 0 {
+							break
+						}
 					}
 				}()
 			})
@@ -591,6 +602,7 @@ func Guiapp(myApp fyne.App) {
 
 			dialog.ShowCustomConfirm("Input QRCODE", "OK", "Cancel", content, func(b bool) {
 				if b {
+					outscan = 1
 					QRcode = entry.Text
 					fmt.Println("Selected:", QRcode)
 					dialog.ShowInformation("Info", "WAIT TO FLASH "+QRcode, MyWindow)
