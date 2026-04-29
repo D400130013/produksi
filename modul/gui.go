@@ -17,7 +17,7 @@ var MyWindow fyne.Window
 var RSLonlyflag uint8
 var QRcode string
 var Updateonlyflag uint8
-var namaapp = "PRODUKSI v1.7.0"
+var namaapp = "PRODUKSI v1.7.2"
 var IPcamera string
 
 func Loginapp() {
@@ -269,7 +269,7 @@ func Guiapp(myApp fyne.App) {
 
 	// Menambahkan RadioGroup untuk Hardware Model (High Set & Low Set)
 	hardwareLabel := widget.NewLabel("Hardware Model:")
-	hardwareOptions := []string{"High Set", "Low Set"}
+	hardwareOptions := []string{"High Set", "Low Set", "Single Set", "Akli"}
 	hardwareRadioGroup := widget.NewRadioGroup(hardwareOptions, nil)
 	hardwareLabel.Hide()
 	hardwareRadioGroup.Hide()
@@ -283,6 +283,10 @@ func Guiapp(myApp fyne.App) {
 			hardwareModelValue = 2
 		} else if selected == "Low Set" {
 			hardwareModelValue = 1
+		} else if selected == "Single Set" {
+			hardwareModelValue = 0
+		} else if selected == "Akli" {
+			hardwareModelValue = 3
 		}
 	}
 	RSLonlyflag = 0

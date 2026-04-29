@@ -299,7 +299,7 @@ func main() {
 
 .\openocd\bin\openocd.exe -f .\openocd\share\openocd\scripts\interface\stlink-v2.cfg -f .\openocd\share\openocd\scripts\target\stm32h7x_dual_bank.cfg -c "init; reset; halt; flash erase_sector 0 0 7; flash erase_sector 1 0 5; program ./bin/vcu/bootloader.bin 0x08000000; flash filld 0x0803fff8 0x0000003401020000 1;halt; program ./bin/vcu/application.bin 0x08040000; halt;flash filld 0x0803FFD0 0x08000b1800015453 1 ; halt; flash filld 0x080ffff8 0x0000000000010000 1; halt; reset; exit"
 
-
+.\openocd\bin\openocd.exe -f .\openocd\share\openocd\scripts\interface\stlink-v2.cfg -f .\openocd\share\openocd\scripts\target\stm32c0x.cfg -c flash init; init; halt; flash erase_sector 0 0 15; reset; exit
 
 .\openocd\bin\openocd.exe -f .\openocd\share\openocd\scripts\interface\stlink-v2.cfg -f .\openocd\share\openocd\scripts\target\stm32h7x_dual_bank.cfg -c "init; halt;flash erase_sector 0 0 7; flash erase_sector 1 0 5; stm32h7x option_write 0 0x20 0x8000000 0x8000000; reset; exit"
 

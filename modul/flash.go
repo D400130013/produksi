@@ -332,7 +332,11 @@ func ExecuteOpenOCDBMS(data Bus) error {
 		datasn1, datasn2, sn = SnBms(data)
 		datasn3 = rearrangeBytes(datasn2)
 	} else {
-		datasn1, datasn3, sn, _ = ReadSN()
+		if data.Id == 3 {
+			datasn1, datasn3, sn, _ = ReadSNStmC0()
+		} else {
+			datasn1, datasn3, sn, _ = ReadSN()
+		}
 
 		if datasn1 == 0 || datasn3 == 0 {
 			datasn1, datasn3, _, sn, err = GetPartInfo(QRcode)
@@ -346,7 +350,7 @@ func ExecuteOpenOCDBMS(data Bus) error {
 	// numcoun := int((datasn2 & 0xffff0000) >> 16)
 
 	// Periksa apakah file ada
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+	if _, err := os.Stat(filePath1); os.IsNotExist(err) {
 		// fmt.Println("File gak ada %s", filePath)
 		Dialogeror("File gak ada" + filePath)
 		Updatestatus(sn, data.Bord, "ERROR", "", data)
@@ -356,12 +360,22 @@ func ExecuteOpenOCDBMS(data Bus) error {
 
 ulang:
 	// Perintah untuk menjalankan OpenOCD
-	cmd := exec.Command(".\\openocd\\bin\\openocd.exe",
-		"-f", ".\\openocd\\share\\openocd\\scripts\\interface\\stlink-v2.cfg",
-		"-f", ".\\openocd\\share\\openocd\\scripts\\target\\stm32f1x.cfg",
-		"-c", fmt.Sprintf("flash init; init; halt; flash erase_sector 0 0 127; flash write_image erase %s 0x08000000;flash filld 0x08004fe0 0x%08x%08x 1; flash filld 0x08004ff0 0x%08xffffffff 1; flash filld 0x08004ff8 0x%08x%08x 1; flash write_image erase %s 0x08005000; halt;flash filld 0x0801fff8 0x00000000%08x 1; reset; exit", filePath, datasn3, datasn1, data.Versifirmboot, data.Id, data.Model, filePath1, data.Versifirmapp))
+	var cmd *exec.Cmd
+	if data.Id == 3 {
+		data.Versifirmbootstr = "0.0.0"
+		cmd = exec.Command(".\\openocd\\bin\\openocd.exe",
+			"-f", ".\\openocd\\share\\openocd\\scripts\\interface\\stlink-v2.cfg",
+			"-f", ".\\openocd\\share\\openocd\\scripts\\target\\stm32c0x.cfg",
+			"-c", fmt.Sprintf("flash init; init; halt; flash erase_sector 0 0 15; flash write_image erase %s 0x08000000;flash filld 0x08007ff0 0x%08x%08x 1; flash filld 0x08007ff8 0x%08x%08x 1; reset; exit", filePath1, datasn3, datasn1, data.Versifirmapp, data.Model))
 
+	} else {
+		cmd = exec.Command(".\\openocd\\bin\\openocd.exe",
+			"-f", ".\\openocd\\share\\openocd\\scripts\\interface\\stlink-v2.cfg",
+			"-f", ".\\openocd\\share\\openocd\\scripts\\target\\stm32f1x.cfg",
+			"-c", fmt.Sprintf("flash init; init; halt; flash erase_sector 0 0 127; flash write_image erase %s 0x08000000;flash filld 0x08004fe0 0x%08x%08x 1; flash filld 0x08004ff0 0x%08xffffffff 1; flash filld 0x08004ff8 0x%08x%08x 1; flash write_image erase %s 0x08005000; halt;flash filld 0x0801fff8 0x00000000%08x 1; reset; exit", filePath, datasn3, datasn1, data.Versifirmboot, data.Id, data.Model, filePath1, data.Versifirmapp))
+	}
 	// Jalankan perintah dan ambil output
+	// fmt.Println(cmd.String())
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		if loop <= 1 {
@@ -369,7 +383,7 @@ ulang:
 			goto ulang
 
 		}
-		// fmt.Println("Output:", string(output))
+		fmt.Println("Output:", string(output))
 		if Updateonlyflag == 0 {
 			Updatestatus(sn, data.Bord, "ERROR", "", data)
 		}
@@ -623,6 +637,84 @@ func ExecuteOpenOCDble(data Bus) error {
 	return nil
 }
 
+func ReadSNStmC0() (uint32, uint32, string, error) {
+
+	inputFile := "test.bin"
+
+	// Membuat file test.bin
+	file, err := os.Create(inputFile)
+	if err != nil {
+		panic(err) // Menangani kesalahan jika file tidak dapat dibuat
+	}
+	defer file.Close() // Menutup file setelah selesai
+
+	cmd := exec.Command(".\\openocd\\bin\\openocd.exe",
+		"-f", ".\\openocd\\share\\openocd\\scripts\\interface\\stlink-v2.cfg",
+		"-f", ".\\openocd\\share\\openocd\\scripts\\target\\stm32c0x.cfg",
+		"-c", fmt.Sprintf("flash init; init; halt; flash read_bank 0 test.bin; shutdown;"))
+
+	// Jalankan perintah dan ambil output
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("eksekusi OpenOCD gagal: %v. Output: %s", err, string(output))
+		// Updatestatus(sn, data.Bord, "ERROR")
+		return 0, 0, "", fmt.Errorf("eksekusi OpenOCD gagal: %v. Output: %s", err, string(output))
+		// return fmt.Errorf("eksekusi OpenOCD gagal: %v. Output: %s", err, string(output))
+	}
+
+	// Offset dalam file (alamat memori)
+	offset := int64(0x7FF0)
+	length := int64(8) // Jumlah byte yang ingin dibaca
+
+	// Buka file input
+	file, err = os.Open(inputFile)
+	if err != nil {
+		fmt.Printf("Gagal membuka file input: %v\n", err)
+		return 0, 0, "", fmt.Errorf("eksekusi OpenOCD gagal: %v. Output: %s", err, string(output))
+
+	}
+	defer file.Close()
+
+	// Pindah ke offset tertentu
+	_, err = file.Seek(offset, io.SeekStart)
+	if err != nil {
+		fmt.Printf("Gagal mencari offset dalam file: %v\n", err)
+		return 0, 0, "", fmt.Errorf("eksekusi OpenOCD gagal: %v. Output: %s", err, string(output))
+
+	}
+
+	// Baca 8 byte dari file
+	buffer := make([]byte, length)
+	n, err := file.Read(buffer)
+	if err != nil && err != io.EOF {
+		fmt.Printf("Gagal membaca file: %v\n", err)
+		return 0, 0, "", fmt.Errorf("eksekusi OpenOCD gagal: %v. Output: %s", err, string(output))
+
+	}
+
+	// Pastikan data yang dibaca sesuai panjang yang diinginkan
+	if int64(n) < length {
+		fmt.Printf("Data yang dibaca lebih sedikit dari panjang yang diminta: %d byte\n", n)
+		return 0, 0, "", fmt.Errorf("eksekusi OpenOCD gagal: %v. Output: %s", err, string(output))
+
+	}
+	// Cetak hasil data yang dibaca
+	// fmt.Printf("Data yang dibaca: %v\n", buffer)
+
+	// Mengonversi data dari buffer ke uint32 (misalnya)
+	var sn1, sn2 uint32
+	if len(buffer) >= 8 {
+		sn1 = binary.LittleEndian.Uint32(buffer[0:4]) // Ambil 4 byte pertama
+		sn2 = binary.LittleEndian.Uint32(buffer[4:8]) // Ambil 4 byte berikutnya
+	}
+	vSn := SnBmsString(sn1, sn2)
+	if sn1 == 0xffffffff || sn2 == 0xffffffff {
+		return 0, 0, "", fmt.Errorf("sn tidak valid")
+	}
+	// fmt.Printf("SN1: %08x, SN2: %08x\n", sn1, sn2)
+	return sn1, sn2, vSn, nil
+}
+
 func ReadSN() (uint32, uint32, string, error) {
 
 	inputFile := "test.bin"
@@ -633,6 +725,7 @@ func ReadSN() (uint32, uint32, string, error) {
 		panic(err) // Menangani kesalahan jika file tidak dapat dibuat
 	}
 	defer file.Close() // Menutup file setelah selesai
+
 	cmd := exec.Command(".\\openocd\\bin\\openocd.exe",
 		"-f", ".\\openocd\\share\\openocd\\scripts\\interface\\stlink-v2.cfg",
 		"-f", ".\\openocd\\share\\openocd\\scripts\\target\\stm32f1x.cfg",
