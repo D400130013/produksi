@@ -17,7 +17,7 @@ var MyWindow fyne.Window
 var RSLonlyflag uint8
 var QRcode string
 var Updateonlyflag uint8
-var namaapp = "PRODUKSI v1.7.2"
+var namaapp = "PRODUKSI v1.7.4"
 var IPcamera string
 
 func Loginapp() {

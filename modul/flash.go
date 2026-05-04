@@ -357,16 +357,17 @@ func ExecuteOpenOCDBMS(data Bus) error {
 		return fmt.Errorf("file tidak ditemukan: %s", filePath)
 	}
 	// SnBms(data)
-
+	// flash filld 0x08000010 0x0800352500000000 1;
 ulang:
 	// Perintah untuk menjalankan OpenOCD
 	var cmd *exec.Cmd
 	if data.Id == 3 {
+		// return nil
 		data.Versifirmbootstr = "0.0.0"
 		cmd = exec.Command(".\\openocd\\bin\\openocd.exe",
-			"-f", ".\\openocd\\share\\openocd\\scripts\\interface\\stlink-v2.cfg",
+			"-f", ".\\openocd\\share\\openocd\\scripts\\interface\\stlink.cfg",
 			"-f", ".\\openocd\\share\\openocd\\scripts\\target\\stm32c0x.cfg",
-			"-c", fmt.Sprintf("flash init; init; halt; flash erase_sector 0 0 15; flash write_image erase %s 0x08000000;flash filld 0x08007ff0 0x%08x%08x 1; flash filld 0x08007ff8 0x%08x%08x 1; reset; exit", filePath1, datasn3, datasn1, data.Versifirmapp, data.Model))
+			"-c", fmt.Sprintf("flash init; init; halt; flash erase_sector 0 0 15; flash write_image erase %s 0x08000000;flash filld 0x08007fe0 0x%08x%08x 1; flash filld 0x08007fe8 0x%08x%08x 1; reset run; exit", filePath1, datasn3, datasn1, data.Versifirmapp, data.Model))
 
 	} else {
 		cmd = exec.Command(".\\openocd\\bin\\openocd.exe",
@@ -375,7 +376,7 @@ ulang:
 			"-c", fmt.Sprintf("flash init; init; halt; flash erase_sector 0 0 127; flash write_image erase %s 0x08000000;flash filld 0x08004fe0 0x%08x%08x 1; flash filld 0x08004ff0 0x%08xffffffff 1; flash filld 0x08004ff8 0x%08x%08x 1; flash write_image erase %s 0x08005000; halt;flash filld 0x0801fff8 0x00000000%08x 1; reset; exit", filePath, datasn3, datasn1, data.Versifirmboot, data.Id, data.Model, filePath1, data.Versifirmapp))
 	}
 	// Jalankan perintah dan ambil output
-	// fmt.Println(cmd.String())
+	fmt.Println(cmd.String())
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		if loop <= 1 {
@@ -390,6 +391,7 @@ ulang:
 		Dialogeror("Gagal Flash" + filePath)
 		return fmt.Errorf("eksekusi OpenOCD gagal: %v. Output: %s", err, string(output))
 	}
+	fmt.Println("Output:", string(output))
 	typepack := ""
 	if data.Id == 2 {
 		typepack = "HIGH"

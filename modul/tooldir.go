@@ -2,6 +2,7 @@ package modul
 
 import (
 	"bufio"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"image/jpeg"
@@ -684,3 +685,34 @@ func ScanQRCodeFromURL(url string) (string, error) {
 
 // 	return fmt.Sprintf("%d.%d.%d", byte3, byte3_2, byte0)
 // }
+
+// PatchUint32 menulis value 32-bit ke address tertentu di file bin
+func PatchUint32(filePath string, baseAddr uint32, targetAddr uint32, value uint32) error {
+	// baca file
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return fmt.Errorf("read file error: %v", err)
+	}
+
+	// hitung offset
+	if targetAddr < baseAddr {
+		return fmt.Errorf("invalid address: target < base")
+	}
+	offset := targetAddr - baseAddr
+
+	// cek range
+	if int(offset)+4 > len(data) {
+		return fmt.Errorf("offset out of range (0x%X)", offset)
+	}
+
+	// tulis little endian
+	binary.LittleEndian.PutUint32(data[offset:], value)
+
+	// tulis balik file
+	err = os.WriteFile(filePath, data, 0644)
+	if err != nil {
+		return fmt.Errorf("write file error: %v", err)
+	}
+
+	return nil
+}

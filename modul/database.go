@@ -427,7 +427,7 @@ func GetPartInfo(qr string) (uint32, uint32, uint32, string, error) {
 	if err != nil {
 		return 0, 0, 0, "", err
 	}
-	url := "https://part.savart-ev.com/api/scan/" + GUID
+	url := IP + "/scan/" + GUID
 	fmt.Println(url)
 	resp, err := http.Get(url)
 	if err != nil {
