@@ -665,7 +665,7 @@ func ReadSNStmC0() (uint32, uint32, string, error) {
 	}
 
 	// Offset dalam file (alamat memori)
-	offset := int64(0x7FF0)
+	offset := int64(0x7FE0)
 	length := int64(8) // Jumlah byte yang ingin dibaca
 
 	// Buka file input
