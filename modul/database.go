@@ -78,7 +78,8 @@ func App_DB_connection() (*sql.DB, error) {
 func Getcount(bord string) uint32 {
 	db, err := App_DB_connection()
 	if err != nil {
-		log.Fatal(err)
+		fmt.Printf("Error koneksi database: %v\n", err)
+		return 0
 	}
 	defer db.Close()
 	// Menyiapkan pernyataan SQL untuk pembaruan
@@ -89,7 +90,8 @@ func Getcount(bord string) uint32 {
 		log.Printf("Tidak ada data ditemukan untuk nama: %s\n", bord)
 		return 0 // Atau nilai default lainnya
 	} else if err != nil {
-		log.Fatal(err)
+		fmt.Printf("Error query database: %v\n", err)
+		return 0
 	}
 
 	fmt.Printf("Count untuk nama '%s' adalah: %d\n", bord, count)
@@ -116,7 +118,8 @@ func UpdateCount(bord string, newCount int) error {
 func Gettgl(bord string) int {
 	db, err := App_DB_connection()
 	if err != nil {
-		log.Fatal(err)
+		fmt.Printf("Error koneksi database: %v\n", err)
+		return 0
 	}
 	defer db.Close()
 	// Menyiapkan pernyataan SQL untuk pembaruan
@@ -127,7 +130,8 @@ func Gettgl(bord string) int {
 		log.Printf("Tidak ada data ditemukan untuk nama: %s\n", bord)
 		return 0 // Atau nilai default lainnya
 	} else if err != nil {
-		log.Fatal(err)
+		fmt.Printf("Error query database: %v\n", err)
+		return 0
 	}
 
 	fmt.Printf("Tanggal untuk nama '%s' adalah: %d\n", bord, count)

@@ -2,7 +2,6 @@ package modul
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -157,7 +156,8 @@ func Guiapp(myApp fyne.App) {
 
 	type_motor, err := readExcelData("menu.xlsx", "type")
 	if err != nil {
-		log.Fatal(err)
+		Dialogeror("Gagal membaca menu.xlsx: " + err.Error())
+		return
 	}
 	// Membuat dropdown untuk Tipe Cell
 	typemotorLabel := widget.NewLabel("Tipe motor:")
@@ -170,7 +170,8 @@ func Guiapp(myApp fyne.App) {
 
 	type_lcd, err := readExcelData("menu.xlsx", "lcd")
 	if err != nil {
-		log.Fatal(err)
+		Dialogeror("Gagal membaca menu.xlsx: " + err.Error())
+		return
 	}
 	// Membuat dropdown untuk Tipe Cell
 	typelcdLabel := widget.NewLabel("LCD:")
@@ -398,7 +399,8 @@ func Guiapp(myApp fyne.App) {
 		if selected == "bms" {
 			modelver, erri := GetlistModelversi(selected)
 			if erri != nil {
-				log.Fatal(err)
+				Dialogeror("Gagal mengambil daftar model: " + erri.Error())
+				return
 			}
 			modelversion.Options = modelver
 			modelversion.Refresh() // Refresh untuk memperbarui pilihan
@@ -421,11 +423,13 @@ func Guiapp(myApp fyne.App) {
 		} else if selected == "vcu" {
 			modelver, erri := GetlistModelversi(selected)
 			if erri != nil {
-				log.Fatal(err)
+				Dialogeror("Gagal mengambil daftar model: " + erri.Error())
+				return
 			}
 			mcu, err := readExcelData("menu.xlsx", "vcumcu")
 			if err != nil {
-				log.Fatal(err)
+				Dialogeror("Gagal membaca menu.xlsx: " + err.Error())
+				return
 			}
 			modelversion.Options = modelver
 			modelversion.Refresh() // Refresh untuk memperbarui pilihan
@@ -446,14 +450,16 @@ func Guiapp(myApp fyne.App) {
 		} else if selected == "hmi" {
 			modelver, erri := GetlistModelversi(selected)
 			if erri != nil {
-				log.Fatal(err)
+				Dialogeror("Gagal mengambil daftar model: " + erri.Error())
+				return
 			}
 			modelversion.Options = modelver
 			modelversion.Refresh() // Refresh untuk memperbarui pilihan
 			modelversion.Show()
 			mcu, err := readExcelData("menu.xlsx", "hmimcu")
 			if err != nil {
-				log.Fatal(err)
+				Dialogeror("Gagal membaca menu.xlsx: " + err.Error())
+				return
 			}
 			mcudropdown.Options = mcu
 			mcudropdown.Refresh() // Refresh untuk memperbarui pilihan
@@ -469,14 +475,16 @@ func Guiapp(myApp fyne.App) {
 		} else if selected == "keyless" {
 			mcu, err := readExcelData("menu.xlsx", "keylessmcu")
 			if err != nil {
-				log.Fatal(err)
+				Dialogeror("Gagal membaca menu.xlsx: " + err.Error())
+				return
 			}
 			mcudropdown.Options = mcu
 			mcudropdown.Refresh() // Refresh untuk memperbarui pilihan
 			mcudropdown.Show()
 			modelver, erri := GetlistModelversi(selected)
 			if erri != nil {
-				log.Fatal(err)
+				Dialogeror("Gagal mengambil daftar model: " + erri.Error())
+				return
 			}
 			modelversion.Options = modelver
 			modelversion.Refresh() // Refresh untuk memperbarui pilihan

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -231,7 +230,7 @@ func IpaLogin(username string, password string) uint8 {
 	// Membuat request GET
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		log.Fatalf("Error creating request: %v", err)
+		fmt.Printf("Error creating request: %v\n", err)
 		return 1
 	}
 
@@ -244,7 +243,7 @@ func IpaLogin(username string, password string) uint8 {
 	// Mengirim request
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatalf("Error sending request: %v", err)
+		fmt.Printf("Error sending request: %v\n", err)
 		return 1
 	}
 	defer resp.Body.Close()
@@ -252,7 +251,7 @@ func IpaLogin(username string, password string) uint8 {
 	// Membaca respons dari server
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatalf("Error reading response body: %v", err)
+		fmt.Printf("Error reading response body: %v\n", err)
 		return 1
 	}
 

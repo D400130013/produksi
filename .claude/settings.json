@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(Get-ChildItem -Path \"d:\\\\program\\\\produksi\" -Force)",
-      "Bash(Get-ChildItem -Path \"d:\\\\program\\\\produksi\\\\modul\\\\\" -File -Recurse | Select-Object -ExpandProperty FullName)"
+      "Bash(Get-ChildItem -Path \"d:\\\\program\\\\produksi\\\\modul\\\\\" -File -Recurse | Select-Object -ExpandProperty FullName)",
+      "Bash(go build *)"
     ]
   }
 }

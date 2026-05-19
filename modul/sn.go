@@ -54,8 +54,8 @@ func SnBms(data Bus) (uint32, uint32, string) {
 	}
 	respData := UpdateBms(bms)
 
-	if respData != nil {
-		// TODO handle
+	if respData == nil {
+		return data1, data2, ""
 	}
 
 	snStr := respData["sn"].(string)
@@ -310,8 +310,8 @@ func SNhmi(data Bus) (uint32, uint32, string, error) {
 	}
 	respData := UpdateHmi(hmi)
 
-	if respData != nil {
-		// TODO handle
+	if respData == nil {
+		return data1, data2, "", errors.New("gagal mendapatkan data dari server")
 	}
 
 	snStr := respData["sn"].(string)

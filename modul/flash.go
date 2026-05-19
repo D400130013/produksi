@@ -646,7 +646,7 @@ func ReadSNStmC0() (uint32, uint32, string, error) {
 	// Membuat file test.bin
 	file, err := os.Create(inputFile)
 	if err != nil {
-		panic(err) // Menangani kesalahan jika file tidak dapat dibuat
+		return 0, 0, "", fmt.Errorf("gagal membuat file %s: %w", inputFile, err)
 	}
 	defer file.Close() // Menutup file setelah selesai
 
@@ -724,7 +724,7 @@ func ReadSN() (uint32, uint32, string, error) {
 	// Membuat file test.bin
 	file, err := os.Create(inputFile)
 	if err != nil {
-		panic(err) // Menangani kesalahan jika file tidak dapat dibuat
+		return 0, 0, "", fmt.Errorf("gagal membuat file %s: %w", inputFile, err)
 	}
 	defer file.Close() // Menutup file setelah selesai
 
@@ -801,7 +801,7 @@ func ReadSNH7() (uint32, uint32, uint32, error) {
 	// Membuat file test.bin
 	file, err := os.Create(inputFile)
 	if err != nil {
-		panic(err) // Menangani kesalahan jika file tidak dapat dibuat
+		return 0, 0, 0, fmt.Errorf("gagal membuat file %s: %w", inputFile, err)
 	}
 	defer file.Close() // Menutup file setelah selesai
 	cmd := exec.Command(".\\openocd\\bin\\openocd.exe",
@@ -880,7 +880,7 @@ func ReadSNH7HMI() (uint32, uint32, string, error) {
 	// Membuat file test.bin
 	file, err := os.Create(inputFile)
 	if err != nil {
-		panic(err) // Menangani kesalahan jika file tidak dapat dibuat
+		return 0, 0, "", fmt.Errorf("gagal membuat file %s: %w", inputFile, err)
 	}
 	defer file.Close() // Menutup file setelah selesai
 	cmd := exec.Command(".\\openocd\\bin\\openocd.exe",
@@ -958,7 +958,7 @@ func ReadSNrsl10() (uint32, uint32, string, error) {
 	// Membuat file test.bin
 	file, err := os.Create(inputFile)
 	if err != nil {
-		panic(err) // Menangani kesalahan jika file tidak dapat dibuat
+		return 0, 0, "", fmt.Errorf("gagal membuat file %s: %w", inputFile, err)
 	}
 	defer file.Close() // Menutup file setelah selesai
 	// cmd := exec.Command(".\\openocd\\bin\\openocd.exe",
